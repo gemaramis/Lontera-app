@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isVerified() { return request.auth.token.email_verified == true; }
+    
+    function isServerMember(serverId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid));
+    }
+
+    function isServerOwner(serverId) {
+      return isSignedIn() && get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
+    }
+
+    // Validation Blueprints
+    function isValidUser(data) {
+      return data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 64 &&
+             data.email == request.auth.token.email &&
+             (data.status == 'online' || data.status == 'offline' || data.status == 'idle' || data.status == 'dnd');
+    }
+
+    function isValidServer(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.ownerId == request.auth.uid;
+    }
+
+    function isValidChannel(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             (data.type == 'text' || data.type == 'voice');
+    }
+
+    function isValidMessage(data) {
+      return data.content is string && data.content.size() > 0 && data.content.size() <= 4000 &&
+             data.authorId == request.auth.uid;
+    }
+
+    function isValidCallSignal(data) {
+      return (data.callerId == request.auth.uid || data.receiverId == request.auth.uid) &&
+             isValidId(data.serverId) && isValidId(data.channelId);
+    }
+
+    function isValidVoiceParticipant(data) {
+      return data.uid == request.auth.uid &&
+             data.displayName is string &&
+             data.joinedAt == request.time;
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); 
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'status', 'lastSeen']);
+    }
+
+    // Servers
+    match /servers/{serverId} {
+      allow get: if isServerMember(serverId) || isServerOwner(serverId);
+      allow create: if isVerified() && isValidServer(incoming()) && incoming().createdAt == request.time;
+      allow update: if isServerOwner(serverId) && isValidServer(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'iconURL']);
+      allow delete: if isServerOwner(serverId);
+
+      // Recursive memberships
+      match /members/{memberId} {
+        allow read: if isServerMember(serverId);
+        allow create, delete: if isServerOwner(serverId) || (memberId == request.auth.uid);
+      }
+
+      // Channels
+      match /channels/{channelId} {
+        allow read: if isServerMember(serverId);
+        allow create, update, delete: if isServerOwner(serverId) && isValidChannel(incoming());
+
+        // Participants in Voice Channel
+        match /participants/{participantId} {
+          allow read: if isServerMember(serverId);
+          allow create, update, delete: if isServerMember(serverId) && participantId == request.auth.uid && isValidVoiceParticipant(incoming());
+        }
+
+        // Messages
+        match /messages/{messageId} {
+          allow read: if isServerMember(serverId);
+          allow create: if isServerMember(serverId) && isValidMessage(incoming()) && incoming().createdAt == request.time;
+          allow update: if isServerMember(serverId) && existing().authorId == request.auth.uid && 
+                        incoming().diff(existing()).affectedKeys().hasOnly(['content']) && isValidMessage(incoming());
+          allow delete: if isServerMember(serverId) && (existing().authorId == request.auth.uid || isServerOwner(serverId));
+        }
+      }
+    }
+
+    // Call Signaling
+    match /calls/{callId} {
+      allow create: if isSignedIn() && incoming().callerId == request.auth.uid && isValidCallSignal(incoming());
+      allow get, update: if isSignedIn() && (existing().callerId == request.auth.uid || existing().receiverId == request.auth.uid);
+      allow list: if false; // Only direct lookup
+
+      match /callerCandidates/{candId} {
+        allow read: if isSignedIn() && (get(/databases/$(database)/documents/calls/$(callId)).data.receiverId == request.auth.uid || get(/databases/$(database)/documents/calls/$(callId)).data.callerId == request.auth.uid);
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/calls/$(callId)).data.callerId == request.auth.uid;
+      }
+      match /receiverCandidates/{candId} {
+        allow read: if isSignedIn() && (get(/databases/$(database)/documents/calls/$(callId)).data.callerId == request.auth.uid || get(/databases/$(database)/documents/calls/$(callId)).data.receiverId == request.auth.uid);
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/calls/$(callId)).data.receiverId == request.auth.uid;
+      }
+    }
+
+    // Conversations
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && request.auth.uid in existing().participants;
+      allow create: if isSignedIn() && request.auth.uid in incoming().participants;
+      allow update: if isSignedIn() && request.auth.uid in existing().participants;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants && isValidMessage(incoming());
+      }
+    }
+  }
+}

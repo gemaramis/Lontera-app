@@ -1,0 +1,6 @@
+{
+  "name": "Lontera",
+  "description": "Lontera is a high-performance, real-time collaboration platform featuring organized chat channels, voice communication UI, and server management, inspired by Discord.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["real-time-chat", "voice-video-sharing"]
+}

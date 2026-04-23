@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and status.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "status": { "type": "string", "enum": ["online", "offline", "idle", "dnd"] },
+        "email": { "type": "string" },
+        "lastSeen": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "Server": {
+      "title": "Server",
+      "description": "A group context for channels and members.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "iconURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "ownerId"]
+    },
+    "Channel": {
+      "title": "Channel",
+      "description": "A specific communication channel within a server.",
+      "type": "object",
+      "properties": {
+        "serverId": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "voice"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["serverId", "name", "type"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message in a text channel.",
+      "type": "object",
+      "properties": {
+        "channelId": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorPhoto": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["channelId", "authorId", "content"]
+    },
+    "VoiceParticipant": {
+      "title": "Voice Participant",
+      "description": "User presence in a voice channel.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "isMuted": { "type": "boolean" },
+        "isDeafened": { "type": "boolean" },
+        "isStreaming": { "type": "boolean" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "joinedAt"]
+    },
+    "CallSignal": {
+      "title": "Call Signal",
+      "description": "WebRTC signaling document for peer-to-peer connections.",
+      "type": "object",
+      "properties": {
+        "callerId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "serverId": { "type": "string" },
+        "channelId": { "type": "string" },
+        "offer": { "type": "object" },
+        "answer": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["callerId", "receiverId", "serverId", "channelId"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "A direct message session between two users.",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    },
+    "/servers/{serverId}": {
+      "schema": "Server",
+      "description": "Server master data."
+    },
+    "/servers/{serverId}/channels/{channelId}": {
+      "schema": "Channel",
+      "description": "Channels belonging to a server."
+    },
+    "/servers/{serverId}/channels/{channelId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a channel."
+    },
+    "/servers/{serverId}/channels/{channelId}/participants/{userId}": {
+      "schema": "VoiceParticipant",
+      "description": "Users currently in this voice channel."
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Direct message conversations."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Messages within a conversation."
+    },
+    "/calls/{callId}": {
+      "schema": "CallSignal",
+      "description": "Active WebRTC signaling documents."
+    },
+    "/calls/{callId}/callerCandidates/{candidateId}": {
+      "schema": "object",
+      "description": "ICE candidates from the caller."
+    },
+    "/calls/{callId}/receiverCandidates/{candidateId}": {
+      "schema": "object",
+      "description": "ICE candidates from the receiver."
+    }
+  }
+}
