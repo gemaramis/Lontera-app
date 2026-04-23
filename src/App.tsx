@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { 
   Hash, 
@@ -808,7 +808,7 @@ const UserList = () => {
       
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-6">
         <div>
-          <h4 className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-[0.2em] mb-4 pl-2">Online — {onlineMembers.length}</h4>
+          <h4 className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-[0.2em] mb-4 pl-2">Online â€” {onlineMembers.length}</h4>
           <div className="space-y-1">
             {onlineMembers.map(m => (
               <div 
@@ -835,7 +835,7 @@ const UserList = () => {
         </div>
 
         <div>
-           <h4 className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-[0.2em] mb-4 pl-2">Offline — {offlineMembers.length}</h4>
+           <h4 className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-[0.2em] mb-4 pl-2">Offline â€” {offlineMembers.length}</h4>
            <div className="space-y-1 opacity-50 transition-opacity hover:opacity-80">
               {offlineMembers.map(m => (
                 <div 
@@ -980,8 +980,121 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
   );
 };
 
+// Registration screen component
+const RegisterScreen = () => {
+  const { signIn } = useApp();
+  const [username, setUsername] = useState('');
+  const [customAvatar, setCustomAvatar] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const avatarPreview = customAvatar.trim() ||
+    `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username || 'lontera')}`;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = username.trim();
+    if (trimmed.length < 3) { setError('Username must be at least 3 characters.'); return; }
+    if (trimmed.length > 32) { setError('Username must be 32 characters or fewer.'); return; }
+    setError('');
+    setSubmitting(true);
+    try {
+      await signIn(trimmed, avatarPreview);
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="h-screen w-screen bg-[#0d0d0f] flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none opacity-40">
+        <div className="absolute top-[20%] left-[10%] w-[40vw] h-[40vw] bg-lontera-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] bg-lontera-secondary/10 rounded-full blur-[100px]" />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 32 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="glass-panel p-10 rounded-3xl w-full max-w-md border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
+      >
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-20 h-20 bg-lontera-primary/10 rounded-3xl border-2 border-lontera-primary/20 flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(233,179,255,0.15)] transform rotate-12 hover:rotate-0 transition-transform duration-500">
+            <Cpu size="40" className="text-lontera-primary" />
+          </div>
+          <h1 className="text-white text-3xl font-display font-bold tracking-tighter">Create your account</h1>
+          <p className="text-lontera-muted text-sm mt-2 text-center leading-relaxed">No email required. Just pick a name and dive in.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex items-center gap-4 bg-white/5 rounded-2xl p-4 border border-white/10">
+            <img
+              src={avatarPreview}
+              alt="avatar preview"
+              className="h-14 w-14 rounded-xl object-cover border-2 border-lontera-primary/30 bg-lontera-surface flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1">Avatar Preview</p>
+              <p className="text-white text-sm font-medium truncate">{username || 'Your username'}</p>
+              <p className="text-lontera-muted text-[11px] mt-0.5">Auto-generated · paste URL below to change</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">
+              Username <span className="text-red-400">*</span>
+            </label>
+            <input
+              id="register-username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="e.g. StargazerX"
+              maxLength={32}
+              autoComplete="off"
+              className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">
+              Avatar URL <span className="text-lontera-muted font-normal normal-case tracking-normal">(optional)</span>
+            </label>
+            <input
+              id="register-avatar"
+              value={customAvatar}
+              onChange={e => setCustomAvatar(e.target.value)}
+              placeholder="https://…"
+              className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+            />
+          </div>
+
+          {error && (
+            <p className="text-red-400 text-sm font-medium bg-red-400/10 rounded-xl px-4 py-3 border border-red-400/20">{error}</p>
+          )}
+
+          <button
+            id="register-submit"
+            type="submit"
+            disabled={submitting}
+            className="w-full neon-button py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Creating account…' : 'Enter Lontera →'}
+          </button>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-white/5 flex justify-between text-[10px] font-display font-bold uppercase tracking-widest text-lontera-muted">
+          <span className="hover:text-lontera-primary cursor-pointer transition-colors">Privacy</span>
+          <span className="hover:text-lontera-primary cursor-pointer transition-colors">Terms</span>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const LonteraApp = () => {
-  const { user, loading, signIn } = useApp();
+  const { user, loading, needsSetup } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   if (loading) {
@@ -995,35 +1108,8 @@ const LonteraApp = () => {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="h-screen w-screen bg-[#0d0d0f] flex items-center justify-center p-6 relative overflow-hidden">
-        {/* Background Gradients from Recipe 7 */}
-        <div className="absolute inset-0 pointer-events-none opacity-40">
-           <div className="absolute top-[20%] left-[10%] w-[40vw] h-[40vw] bg-lontera-primary/10 rounded-full blur-[120px]" />
-           <div className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] bg-lontera-secondary/10 rounded-full blur-[100px]" />
-        </div>
-
-        <div className="glass-panel p-10 rounded-3xl w-full max-w-md flex flex-col items-center border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10">
-          <div className="w-24 h-24 bg-lontera-primary/10 rounded-3xl border-2 border-lontera-primary/20 flex items-center justify-center mb-8 shadow-[0_0_40px_rgba(233,179,255,0.15)] transform rotate-12 transition-transform hover:rotate-0 duration-500">
-             <Cpu size="48" className="text-lontera-primary" />
-          </div>
-          <h1 className="text-white text-4xl font-display font-bold mb-3 tracking-tighter">Welcome back!</h1>
-          <p className="text-lontera-muted mb-10 text-center text-sm font-sans tracking-wide leading-relaxed">The next generation of real-time collaboration starts here. Connect your world in deep neon.</p>
-          <button 
-            onClick={signIn}
-            className="w-full neon-button py-4 font-display font-bold text-lg shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02]"
-          >
-            Sign in with Google
-          </button>
-          <div className="mt-8 pt-8 border-t border-white/5 w-full flex justify-between text-xs font-display font-bold uppercase tracking-widest text-lontera-muted">
-             <span className="hover:text-lontera-primary cursor-pointer transition-colors">Privacy</span>
-             <span className="hover:text-lontera-primary cursor-pointer transition-colors">Register</span>
-             <span className="hover:text-lontera-primary cursor-pointer transition-colors">Terms</span>
-          </div>
-        </div>
-      </div>
-    );
+  if (!user || needsSetup) {
+    return <RegisterScreen />;
   }
 
   return (
