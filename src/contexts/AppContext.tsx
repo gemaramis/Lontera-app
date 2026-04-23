@@ -37,8 +37,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const userRef = doc(db, 'users', authUser.uid);
         await setDoc(userRef, {
           uid: authUser.uid,
-          displayName: authUser.displayName,
-          photoURL: authUser.photoURL,
+          displayName: authUser.displayName || authUser.email?.split('@')[0] || 'User',
+          photoURL: authUser.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${authUser.uid}`,
           email: authUser.email,
         }, { merge: true });
 

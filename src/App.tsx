@@ -74,6 +74,8 @@ const SidebarServers = () => {
     const q = query(collection(db, 'servers'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setServers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Servers snapshot error:", error);
     });
     return unsubscribe;
   }, []);
@@ -82,11 +84,33 @@ const SidebarServers = () => {
     if (!user) return;
     const name = prompt('Server Name:');
     if (name) {
-      await addDoc(collection(db, 'servers'), {
-        name,
-        ownerId: user.uid,
-        createdAt: serverTimestamp()
-      });
+      try {
+        const serverRef = await addDoc(collection(db, 'servers'), {
+          name,
+          ownerId: user.uid,
+          createdAt: serverTimestamp()
+        });
+        
+        // Add creator to members automatically
+        await setDoc(doc(db, `servers/${serverRef.id}/members`, user.uid), {
+          uid: user.uid,
+          joinedAt: serverTimestamp()
+        });
+
+        // Create a default #general channel
+        const channelRef = await addDoc(collection(db, `servers/${serverRef.id}/channels`), {
+          name: 'general',
+          type: 'text',
+          serverId: serverRef.id,
+          createdAt: serverTimestamp()
+        });
+
+        setCurrentServerId(serverRef.id);
+        setCurrentChannelId(channelRef.id);
+      } catch (err: any) {
+        console.error("Create server error:", err);
+        alert(`Failed to create server: ${err.message}`);
+      }
     }
   };
 
@@ -154,12 +178,17 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
     if (!currentServerId) return;
     const name = prompt(`New ${type} channel name:`);
     if (name) {
-      await addDoc(collection(db, `servers/${currentServerId}/channels`), {
-        name,
-        type,
-        serverId: currentServerId,
-        createdAt: serverTimestamp()
-      });
+      try {
+        await addDoc(collection(db, `servers/${currentServerId}/channels`), {
+          name,
+          type,
+          serverId: currentServerId,
+          createdAt: serverTimestamp()
+        });
+      } catch (err: any) {
+        console.error("Create channel error:", err);
+        alert(`Failed to create channel: ${err.message}`);
+      }
     }
   };
 
@@ -289,14 +318,20 @@ const ChatArea = () => {
     setMessages([]); // Clear on switch
     if (currentServerId && currentChannelId) {
       const channelRef = doc(db, `servers/${currentServerId}/channels/${currentChannelId}`);
-      const unsubChannel = onSnapshot(channelRef, (doc) => setChannel({ id: doc.id, ...doc.data() }));
+      const unsubChannel = onSnapshot(channelRef, 
+        (doc) => setChannel({ id: doc.id, ...doc.data() }),
+        (err) => console.error("Channel sub error:", err)
+      );
 
       const q = query(collection(db, `servers/${currentServerId}/channels/${currentChannelId}/messages`));
-      const unsubMessages = onSnapshot(q, (snapshot) => {
-        const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setMessages(msgs.sort((a: any, b: any) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0)));
-        setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 100);
-      });
+      const unsubMessages = onSnapshot(q, 
+        (snapshot) => {
+          const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setMessages(msgs.sort((a: any, b: any) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0)));
+          setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 100);
+        },
+        (err) => console.error("Messages sub error:", err)
+      );
       return () => {
         unsubChannel();
         unsubMessages();
@@ -304,14 +339,20 @@ const ChatArea = () => {
     } else if (currentConversationId) {
       setChannel(null);
       const convRef = doc(db, 'conversations', currentConversationId);
-      const unsubConv = onSnapshot(convRef, (doc) => setConversation({ id: doc.id, ...doc.data() }));
+      const unsubConv = onSnapshot(convRef, 
+        (doc) => setConversation({ id: doc.id, ...doc.data() }),
+        (err) => console.error("Conv sub error:", err)
+      );
 
       const q = query(collection(db, `conversations/${currentConversationId}/messages`));
-      const unsubMessages = onSnapshot(q, (snapshot) => {
-        const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setMessages(msgs.sort((a: any, b: any) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0)));
-        setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 100);
-      });
+      const unsubMessages = onSnapshot(q, 
+        (snapshot) => {
+          const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          setMessages(msgs.sort((a: any, b: any) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0)));
+          setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }), 100);
+        },
+        (err) => console.error("Conv messages sub error:", err)
+      );
       return () => {
         unsubConv();
         unsubMessages();
