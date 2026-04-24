@@ -26,7 +26,14 @@ import {
   Send,
   Trash2,
   Shield,
-  MoreHorizontal
+  MoreHorizontal,
+  MoreVertical,
+  Compass,
+  Library,
+  Check,
+  X,
+  Mail,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
