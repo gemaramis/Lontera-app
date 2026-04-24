@@ -395,7 +395,7 @@ const SidebarServers = () => {
   );
 };
 
-const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSettings }: { onOpenSettings: () => void, onOpenServerSettings: () => void, onOpenChannelSettings: (c: any) => void }) => {
+const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSettings, onOpenUserDirectory }: { onOpenSettings: () => void, onOpenServerSettings: () => void, onOpenChannelSettings: (c: any) => void, onOpenUserDirectory: () => void }) => {
   const { currentServerId, currentServer, currentChannelId, setCurrentChannelId, currentConversationId, setCurrentConversationId, user } = useApp();
   const [channels, setChannels] = useState<any[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
@@ -443,8 +443,9 @@ const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSe
     return (
       <div className="w-64 glass-surface border-r border-white/10 h-full flex flex-col p-3">
         <div className="mb-6 mt-4">
-          <div className="flex items-center justify-between px-3 mb-2 text-on-surface-variant cursor-pointer hover:text-white transition-colors">
+          <div className="flex items-center justify-between px-3 mb-2 text-on-surface-variant">
             <span className="text-[10px] font-display font-bold uppercase tracking-wider">Direct Messages</span>
+            <button onClick={onOpenUserDirectory} className="hover:text-white transition-colors p-1 rounded-md hover:bg-white/5"><Plus size="14" /></button>
           </div>
           <div className="space-y-0.5">
             {conversations.map(conv => {
@@ -1065,7 +1066,7 @@ const UserList = () => {
               >
                 <div className="relative">
                   <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-10 w-10 rounded-xl object-cover" alt="" />
-                  <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-4 border-[#1e1f22]" />
+                  <div className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-[3px] border-[#1e1f22] ${m.status === 'online' ? 'bg-green-500' : m.status === 'idle' ? 'bg-yellow-500' : m.status === 'dnd' ? 'bg-red-500' : 'bg-gray-500'}`} />
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="text-primary text-sm font-bold truncate group-hover:text-on-surface transition-colors">{m.displayName}</span>
@@ -1092,7 +1093,7 @@ const UserList = () => {
                 >
                   <div className="relative">
                     <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-10 w-10 rounded-xl object-cover grayscale" alt="" />
-                    <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-gray-500 rounded-full border-4 border-[#1e1f22]" />
+                    <div className="absolute -bottom-1 -right-1 h-3.5 w-3.5 bg-gray-500 rounded-full border-[3px] border-[#1e1f22]" />
                   </div>
                   <span className="text-on-surface-variant text-sm font-medium truncate">{m.displayName}</span>
                 </div>
@@ -1108,12 +1109,14 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
   const { profileData, updateProfile } = useApp();
   const [displayName, setDisplayName] = useState('');
   const [customStatus, setCustomStatus] = useState('');
+  const [status, setStatus] = useState('online');
   const [photoURL, setPhotoURL] = useState('');
 
   useEffect(() => {
     if (profileData) {
       setDisplayName(profileData.displayName || '');
       setCustomStatus(profileData.customStatus || '');
+      setStatus(profileData.status || 'online');
       setPhotoURL(profileData.photoURL || '');
     }
   }, [profileData, isOpen]);
@@ -1122,6 +1125,7 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
     await updateProfile({
       displayName,
       customStatus,
+      status,
       photoURL
     });
     onClose();
@@ -1170,18 +1174,41 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
                   </div>
                   <div className="flex-1">
                     <h4 className="text-white font-bold text-lg mb-1">{displayName}</h4>
-                    <p className="text-on-surface-variant text-xs uppercase tracking-widest font-bold">Online</p>
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2.5 w-2.5 rounded-full ${status === 'online' ? 'bg-green-500' : status === 'idle' ? 'bg-yellow-500' : status === 'dnd' ? 'bg-red-500' : 'bg-gray-500'}`} />
+                      <p className="text-on-surface-variant text-[10px] uppercase tracking-widest font-bold">{status}</p>
+                    </div>
                   </div>
                   <button disabled className="btn-primary py-2 px-6 text-sm font-bold opacity-50 cursor-default">Preview</button>
                 </div>
 
                 <div className="space-y-4">
                   <div>
+                    <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-3">Presence Status</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'online', label: 'Online', color: 'bg-green-500' },
+                        { id: 'idle', label: 'Idle', color: 'bg-yellow-500' },
+                        { id: 'dnd', label: 'Do Not Disturb', color: 'bg-red-500' },
+                        { id: 'offline', label: 'Invisible', color: 'bg-gray-500' }
+                      ].map(s => (
+                        <button 
+                          key={s.id}
+                          onClick={() => setStatus(s.id)}
+                          className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all text-[11px] font-bold ${status === s.id ? 'bg-primary/10 border-primary text-primary' : 'bg-white/5 border-white/5 text-on-surface-variant hover:bg-white/10'}`}
+                        >
+                          <div className={`h-2 w-2 rounded-full ${s.color}`} />
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Display Name</label>
                     <input 
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all"
+                      className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all text-sm font-semibold"
                     />
                   </div>
                   <div>
@@ -1219,6 +1246,89 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
                   </button>
                 </div>
               </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+const UserDirectoryModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const { user, setCurrentServerId, setCurrentChannelId, setCurrentConversationId } = useApp();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const q = query(collection(db, 'users'), limit(50));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.id !== user?.uid));
+    });
+    return unsubscribe;
+  }, [isOpen, user]);
+
+  const startConversation = async (otherUserId: string) => {
+    if (!user) return;
+    const sortedIds = [user.uid, otherUserId].sort();
+    const convId = sortedIds.join('_');
+    await setDoc(doc(db, 'conversations', convId), {
+      participants: sortedIds,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    
+    setCurrentServerId(null);
+    setCurrentChannelId(null);
+    setCurrentConversationId(convId);
+    onClose();
+  };
+
+  const filtered = users.filter(u => u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || u.email?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-xl glass-floating rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[70vh]">
+            <div className="p-6 border-b border-white/5">
+              <h2 className="text-xl font-display font-bold text-white mb-4">Discover Friends</h2>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" size="18" />
+                <input 
+                  autoFocus
+                  placeholder="Search by username or email..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 p-3 pl-12 rounded-xl text-white outline-none focus:border-primary transition-all"
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              {filtered.map(u => (
+                <div 
+                  key={u.id}
+                  onClick={() => startConversation(u.id)}
+                  className="flex items-center justify-between p-3 rounded-2xl hover:bg-white/5 border border-transparent hover:border-white/5 transition-all cursor-pointer group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <img src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${u.displayName}`} className="h-12 w-12 rounded-2xl object-cover" alt="" />
+                      <div className={`absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-[#1e1f22] ${u.status === 'online' ? 'bg-green-500' : u.status === 'idle' ? 'bg-yellow-500' : u.status === 'dnd' ? 'bg-red-500' : 'bg-gray-500'}`} />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold text-sm leading-tight group-hover:text-primary transition-colors">{u.displayName}</h4>
+                      <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold mt-0.5">{u.status || 'Offline'}</p>
+                    </div>
+                  </div>
+                  <button className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all">Message</button>
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div className="text-center py-10">
+                  <p className="text-on-surface-variant text-sm font-medium">No users found matching "{searchTerm}"</p>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>
@@ -1531,6 +1641,7 @@ const LonteraApp = () => {
   const { user, loading, needsSetup, currentServer, currentServerId } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isServerSettingsOpen, setIsServerSettingsOpen] = useState(false);
+  const [isUserDirectoryOpen, setIsUserDirectoryOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<any>(null);
 
   if (loading) {
@@ -1558,12 +1669,14 @@ const LonteraApp = () => {
             onOpenSettings={() => setIsSettingsOpen(true)} 
             onOpenServerSettings={() => setIsServerSettingsOpen(true)}
             onOpenChannelSettings={(c) => setEditingChannel(c)}
+            onOpenUserDirectory={() => setIsUserDirectoryOpen(true)}
           />
           <ChatArea />
           <UserList />
         </div>
       </div>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <UserDirectoryModal isOpen={isUserDirectoryOpen} onClose={() => setIsUserDirectoryOpen(false)} />
       <ServerSettingsModal isOpen={isServerSettingsOpen} onClose={() => setIsServerSettingsOpen(false)} server={currentServer} />
       <ChannelSettingsModal isOpen={!!editingChannel} onClose={() => setEditingChannel(null)} channel={editingChannel} serverId={currentServerId || ''} />
     </div>
