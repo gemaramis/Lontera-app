@@ -913,7 +913,7 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
 
           // Cleanup disconnected peers
           Object.keys(peerConnections.current).forEach(uid => {
-            if (!parts.some(p => p.uid === uid)) {
+            if (!parts.some((p: any) => p.uid === uid)) {
               peerConnections.current[uid].close();
               delete peerConnections.current[uid];
               setRemoteStreams(prev => {
