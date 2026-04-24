@@ -62,25 +62,25 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
           />
           <motion.div 
             initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-lg bg-[#1a1a1c] border border-white/10 rounded-3xl p-8 shadow-2xl"
+            className="relative w-full max-w-lg bg-surface-container-high border border-white/10 rounded-3xl p-8 shadow-2xl"
           >
             <h2 className="text-2xl font-display font-bold text-white mb-6">Server Settings</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Server Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all" />
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Server Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
               </div>
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Description</label>
-                <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all" />
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Description</label>
+                <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
               </div>
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Status</label>
-                <input value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all" />
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Status</label>
+                <input value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
               </div>
             </div>
             <div className="flex gap-4 mt-8">
-              <button onClick={handleSave} className="flex-1 bg-lontera-primary text-[#310048] font-display font-bold py-3 rounded-xl hover:bg-lontera-primary/80 transition-all">Save Changes</button>
+              <button onClick={handleSave} className="flex-1 bg-primary text-[#310048] font-display font-bold py-3 rounded-xl hover:bg-primary/80 transition-all">Save Changes</button>
               <button onClick={onClose} className="flex-1 bg-white/5 text-white font-display font-bold py-3 rounded-xl hover:bg-white/10 transition-all">Cancel</button>
             </div>
           </motion.div>
@@ -94,14 +94,14 @@ const TopNavBar = () => {
 
   const { user, profileData } = useApp();
   return (
-    <header className="h-16 fixed top-0 w-full z-50 bg-[#121214]/70 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 shadow-[0_0_20px_rgba(233,179,255,0.05)]">
+    <header className="h-16 fixed top-0 w-full z-50 glass-surface flex justify-between items-center px-6 shadow-sm shadow-black/20">
       <div className="flex items-center gap-10">
-        <div className="text-xl font-display font-bold bg-clip-text text-transparent bg-gradient-to-r from-lontera-primary to-lontera-secondary tracking-tight">
+        <div className="text-xl font-display font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary tracking-tight">
           Lontera
         </div>
         <nav className="hidden md:flex items-center gap-6">
           {['Explore', 'Friends', 'Library'].map((item) => (
-            <a key={item} href="#" className="text-lontera-muted hover:text-white hover:bg-white/5 transition-all px-3 py-1 rounded-md text-sm font-medium">
+            <a key={item} href="#" className="text-on-surface-variant hover:text-white hover:bg-white/5 transition-all px-3 py-1 rounded-md text-sm font-medium">
               {item}
             </a>
           ))}
@@ -109,15 +109,15 @@ const TopNavBar = () => {
       </div>
       <div className="flex items-center gap-6">
         <div className="flex gap-2">
-          <button className="text-lontera-muted hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><Bell size="20" /></button>
-          <button className="text-lontera-muted hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><HelpCircle size="20" /></button>
-          <button className="text-lontera-muted hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><Settings size="20" /></button>
+          <button className="text-on-surface-variant hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><Bell size="20" /></button>
+          <button className="text-on-surface-variant hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><HelpCircle size="20" /></button>
+          <button className="text-on-surface-variant hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><Settings size="20" /></button>
         </div>
         <div className="flex items-center gap-3 pl-4 border-l border-white/10">
           <span className="hidden sm:block text-xs font-semibold text-white/50 underline-offset-4 cursor-pointer hover:text-white transition-colors">{profileData?.displayName || user?.email}</span>
           <img 
             src={profileData?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${profileData?.displayName || 'U'}`} 
-            className="h-8 w-8 rounded-full border border-lontera-outline/50 object-cover" 
+            className="h-8 w-8 rounded-full border border-outline/50 object-cover" 
             alt="user" 
           />
         </div>
@@ -178,12 +178,12 @@ const SidebarServers = () => {
   };
 
   return (
-    <nav className="fixed left-0 top-16 w-18 h-[calc(100vh-64px)] bg-[#0d0d0f] border-r border-white/5 flex flex-col items-center py-4 z-40">
+    <nav className="fixed left-0 top-16 w-18 h-[calc(100vh-64px)] glass-surface border-r border-white/10 flex flex-col items-center py-4 z-40">
       <div 
-        className={`sidebar-icon-v2 mb-2 ${!currentServerId ? 'border-lontera-primary grayscale-0 bg-lontera-primary/10 shadow-[0_0_15px_rgba(233,179,255,0.2)]' : ''}`} 
+        className={`sidebar-icon-v2 mb-2 ${!currentServerId ? 'border-primary grayscale-0 bg-primary/10 shadow-[0_0_15px_rgba(233,179,255,0.2)]' : ''}`} 
         onClick={() => setCurrentServerId(null)}
       >
-        <Home size="24" className={!currentServerId ? 'text-lontera-primary' : 'text-lontera-muted'} />
+        <Home size="24" className={!currentServerId ? 'text-primary' : 'text-on-surface-variant'} />
       </div>
       
       <div className="w-8 h-[1px] bg-white/10 mx-auto my-2" />
@@ -192,13 +192,13 @@ const SidebarServers = () => {
         {servers.map(server => (
           <div 
             key={server.id} 
-            className={`sidebar-icon-v2 group ${currentServerId === server.id ? 'border-lontera-primary grayscale-0 ring-1 ring-lontera-primary/50' : ''}`}
+            className={`sidebar-icon-v2 group ${currentServerId === server.id ? 'border-primary grayscale-0 ring-1 ring-primary/50' : ''}`}
             onClick={() => setCurrentServerId(server.id)}
           >
-            <span className={`font-display font-bold ${currentServerId === server.id ? 'text-lontera-primary' : 'text-lontera-muted'}`}>
+            <span className={`font-display font-bold ${currentServerId === server.id ? 'text-primary' : 'text-on-surface-variant'}`}>
               {server.name.charAt(0).toUpperCase()}
             </span>
-            <div className="absolute left-0 w-1 h-0 bg-lontera-primary rounded-r-full group-hover:h-5 transition-all duration-300" />
+            <div className="absolute left-0 w-1 h-0 bg-primary rounded-r-full group-hover:h-5 transition-all duration-300" />
           </div>
         ))}
         
@@ -208,7 +208,7 @@ const SidebarServers = () => {
       </div>
 
       <div className="mt-auto flex flex-col items-center gap-4 pb-4">
-        <button className="text-lontera-muted hover:text-red-400 transition-colors" onClick={logout}>
+        <button className="text-on-surface-variant hover:text-red-400 transition-colors" onClick={logout}>
           <LogOut size="20" />
         </button>
       </div>
@@ -263,9 +263,9 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
 
   if (!currentServerId) {
     return (
-      <div className="w-64 bg-[#1e1f22]/40 backdrop-blur-2xl border-r border-white/5 h-full flex flex-col p-3">
+      <div className="w-64 glass-surface border-r border-white/10 h-full flex flex-col p-3">
         <div className="mb-6 mt-4">
-          <div className="flex items-center justify-between px-3 mb-2 text-lontera-muted cursor-pointer hover:text-white transition-colors">
+          <div className="flex items-center justify-between px-3 mb-2 text-on-surface-variant cursor-pointer hover:text-white transition-colors">
             <span className="text-[10px] font-display font-bold uppercase tracking-wider">Direct Messages</span>
           </div>
           <div className="space-y-0.5">
@@ -275,7 +275,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
               return (
                 <div 
                   key={conv.id} 
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentConversationId === conv.id ? 'bg-lontera-primary/20 text-lontera-primary ring-1 ring-lontera-primary/30' : 'text-lontera-muted hover:bg-white/5 hover:text-lontera-on-surface'}`}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentConversationId === conv.id ? 'bg-primary/20 text-primary ring-1 ring-primary/30' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
                   onClick={() => {
                     setCurrentChannelId(null);
                     setCurrentConversationId(conv.id);
@@ -289,12 +289,12 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
           </div>
         </div>
         
-        <div className="mt-auto p-3 bg-black/20 border-t border-white/5 -mx-3 flex justify-between items-center">
+        <div className="mt-auto p-3 bg-white/5 border-t border-white/5 -mx-3 flex justify-between items-center">
           <div className="flex gap-1">
-            <button className="p-2 rounded-lg text-lontera-muted hover:text-red-400 hover:bg-white/5 transition-all"><Mic size="18" /></button>
-            <button className="p-2 rounded-lg text-lontera-muted hover:text-red-400 hover:bg-white/5 transition-all"><Headphones size="18" /></button>
+            <button className="p-2 rounded-lg text-on-surface-variant hover:text-red-400 hover:bg-white/5 transition-all"><Mic size="18" /></button>
+            <button className="p-2 rounded-lg text-on-surface-variant hover:text-red-400 hover:bg-white/5 transition-all"><Headphones size="18" /></button>
           </div>
-          <button onClick={onOpenSettings} className="p-2 rounded-lg text-lontera-muted hover:text-white hover:bg-white/5 transition-all"><Settings size="18" /></button>
+          <button onClick={onOpenSettings} className="p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-all"><Settings size="18" /></button>
         </div>
       </div>
     );
@@ -303,32 +303,32 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
   const isAdmin = currentServer?.adminIds?.includes(user?.uid) || currentServer?.ownerId === user?.uid;
 
   return (
-    <div className="w-64 bg-[#1e1f22]/40 backdrop-blur-2xl border-r border-white/5 h-full flex flex-col">
-      <div className="p-4 pt-6 pb-4 border-b border-white/5 bg-black/5">
+    <div className="w-64 glass-surface border-r border-white/10 h-full flex flex-col">
+      <div className="p-4 pt-6 pb-4 border-b border-white/5 bg-white/5">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 bg-lontera-primary/10 rounded-xl border border-lontera-primary/20 flex items-center justify-center font-display font-bold text-lontera-primary">
+            <div className="h-10 w-10 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-center font-display font-bold text-primary">
               {currentServer?.name?.charAt(0)?.toUpperCase() || 'S'}
             </div>
             <div>
               <h2 className="font-display font-bold text-white text-sm leading-tight truncate max-w-[120px]">{currentServer?.name || 'Server Name'}</h2>
-              <p className="text-[10px] text-lontera-muted uppercase tracking-widest font-bold truncate max-w-[120px]">{currentServer?.status || 'Online'}</p>
+              <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold truncate max-w-[120px]">{currentServer?.status || 'Online'}</p>
             </div>
           </div>
           {isAdmin && (
-            <button onClick={() => setShowServerSettings(true)} className="text-lontera-muted hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
+            <button onClick={() => setShowServerSettings(true)} className="text-on-surface-variant hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
               <Settings size="16" />
             </button>
           )}
         </div>
-        <button className="w-full bg-lontera-primary hover:bg-lontera-primary/80 text-[#310048] font-display font-bold py-2 rounded-lg text-sm transition-all shadow-[0_0_15px_rgba(233,179,255,0.1)]">
+        <button className="w-full bg-primary hover:bg-primary/80 text-[#310048] font-display font-bold py-2 rounded-lg text-sm transition-all shadow-[0_0_15px_rgba(233,179,255,0.1)]">
           Join Voice
         </button>
       </div>
       
       <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
         <div className="mb-6">
-          <div className="flex items-center justify-between px-3 mb-2 text-lontera-muted cursor-pointer hover:text-white transition-colors">
+          <div className="flex items-center justify-between px-3 mb-2 text-on-surface-variant cursor-pointer hover:text-white transition-colors">
             <div className="flex items-center gap-1">
               <ChevronDown size="14" />
               <span className="text-[10px] font-display font-bold uppercase tracking-wider">Text Channels</span>
@@ -339,10 +339,10 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
             {channels.filter(c => c.type === 'text').map(channel => (
               <div 
                 key={channel.id} 
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentChannelId === channel.id ? 'bg-lontera-primary/20 text-lontera-primary ring-1 ring-lontera-primary/30' : 'text-lontera-muted hover:bg-white/5 hover:text-lontera-on-surface'}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentChannelId === channel.id ? 'bg-primary/20 text-primary ring-1 ring-primary/30' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
                 onClick={() => setCurrentChannelId(channel.id)}
               >
-                <Hash size="16" className={currentChannelId === channel.id ? 'text-lontera-primary' : 'text-lontera-muted group-hover:text-lontera-on-surface'} />
+                <Hash size="16" className={currentChannelId === channel.id ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'} />
                 <span className="text-sm font-medium">{channel.name}</span>
               </div>
             ))}
@@ -350,7 +350,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
         </div>
 
         <div className="mb-6">
-          <div className="flex items-center justify-between px-3 mb-2 text-lontera-muted cursor-pointer hover:text-white transition-colors">
+          <div className="flex items-center justify-between px-3 mb-2 text-on-surface-variant cursor-pointer hover:text-white transition-colors">
             <div className="flex items-center gap-1">
               <ChevronDown size="14" />
               <span className="text-[10px] font-display font-bold uppercase tracking-wider">Voice Channels</span>
@@ -361,11 +361,11 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
             {channels.filter(c => c.type === 'voice').map(channel => (
               <div 
                 key={channel.id} 
-                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentChannelId === channel.id ? 'bg-lontera-primary/20 text-lontera-primary ring-1 ring-lontera-primary/30' : 'text-lontera-muted hover:bg-white/5 hover:text-lontera-on-surface'}`}
+                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentChannelId === channel.id ? 'bg-primary/20 text-primary ring-1 ring-primary/30' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
                 onClick={() => setCurrentChannelId(channel.id)}
               >
                 <div className="flex items-center gap-2">
-                  <Volume2 size="16" className={currentChannelId === channel.id ? 'text-lontera-primary' : 'text-lontera-muted group-hover:text-lontera-on-surface'} />
+                  <Volume2 size="16" className={currentChannelId === channel.id ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'} />
                   <span className="text-sm font-medium">{channel.name}</span>
                 </div>
               </div>
@@ -374,12 +374,12 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
         </div>
       </div>
 
-      <div className="p-3 bg-black/20 border-t border-white/5 flex justify-between items-center">
+      <div className="p-3 bg-white/5 border-t border-white/5 flex justify-between items-center">
         <div className="flex gap-1">
-          <button className="p-2 rounded-lg text-lontera-muted hover:text-red-400 hover:bg-white/5 transition-all"><Mic size="18" /></button>
-          <button className="p-2 rounded-lg text-lontera-muted hover:text-red-400 hover:bg-white/5 transition-all"><Headphones size="18" /></button>
+          <button className="p-2 rounded-lg text-on-surface-variant hover:text-red-400 hover:bg-white/5 transition-all"><Mic size="18" /></button>
+          <button className="p-2 rounded-lg text-on-surface-variant hover:text-red-400 hover:bg-white/5 transition-all"><Headphones size="18" /></button>
         </div>
-        <button onClick={onOpenSettings} className="p-2 rounded-lg text-lontera-muted hover:text-white hover:bg-white/5 transition-all"><Settings size="18" /></button>
+        <button onClick={onOpenSettings} className="p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-all"><Settings size="18" /></button>
       </div>
       <ServerSettingsModal isOpen={showServerSettings} onClose={() => setShowServerSettings(false)} server={currentServer} />
     </div>
@@ -472,12 +472,12 @@ const ChatArea = () => {
 
   if (!currentChannelId && !currentConversationId) {
     return (
-      <div className="flex-1 flex flex-col bg-lontera-bg items-center justify-center text-lontera-muted">
-        <div className="p-12 glass-panel rounded-full mb-8 opacity-20 ring-4 ring-lontera-primary/10">
-          <Hash size="120" className="text-lontera-primary" />
+      <div className="flex-1 flex flex-col bg-background items-center justify-center text-on-surface-variant">
+        <div className="p-12 glass-floating rounded-full mb-8 opacity-20 ring-4 ring-primary/10">
+          <Hash size="120" className="text-primary" />
         </div>
         <h2 className="text-white text-3xl font-display font-bold mb-2">Welcome to Lontera</h2>
-        <p className="text-lontera-muted max-w-xs text-center">Select a server and channel or a direct message to start your journey.</p>
+        <p className="text-on-surface-variant max-w-xs text-center">Select a server and channel or a direct message to start your journey.</p>
       </div>
     );
   }
@@ -490,15 +490,15 @@ const ChatArea = () => {
   const placeholder = channel ? `Message #${channel.name}` : 'Message Friend';
 
   return (
-    <div className="flex-1 flex flex-col bg-[#131315] relative">
-      <div className="h-14 flex-shrink-0 flex items-center px-6 border-b border-white/5 bg-[#1a1a1c]/50 backdrop-blur-md justify-between z-10 transition-all">
+    <div className="flex-1 flex flex-col bg-surface-container-low relative">
+      <div className="h-14 flex-shrink-0 flex items-center px-6 border-b border-white/10 glass-surface justify-between z-10 transition-all">
         <div className="flex items-center gap-3">
-          {channel ? <Hash size="20" className="text-lontera-muted" /> : <Users size="20" className="text-lontera-muted" />}
+          {channel ? <Hash size="20" className="text-on-surface-variant" /> : <Users size="20" className="text-on-surface-variant" />}
           <h2 className="font-display font-bold text-white tracking-wide">{headerTitle}</h2>
           <div className="h-4 w-[1px] bg-white/10 mx-2" />
-          <p className="text-xs text-lontera-muted truncate max-w-sm">Welcome to the conversation. Keep it clean.</p>
+          <p className="text-xs text-on-surface-variant truncate max-w-sm">Welcome to the conversation. Keep it clean.</p>
         </div>
-        <div className="flex items-center gap-4 text-lontera-muted">
+        <div className="flex items-center gap-4 text-on-surface-variant">
           <Search size="18" className="cursor-pointer hover:text-white" />
           <Inbox size="18" className="cursor-pointer hover:text-white" />
           <HelpCircle size="18" className="cursor-pointer hover:text-white" />
@@ -507,11 +507,11 @@ const ChatArea = () => {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 flex flex-col space-y-6 custom-scrollbar">
         <div className="py-12 border-b border-white/5 mb-4">
-          <div className="bg-lontera-primary/10 h-20 w-20 rounded-2xl flex items-center justify-center mb-6 border border-lontera-primary/20 shadow-[0_0_30px_rgba(233,179,255,0.1)]">
-            {channel ? <Hash size="44" className="text-lontera-primary" /> : <Users size="44" className="text-lontera-primary" />}
+          <div className="bg-primary/10 h-20 w-20 rounded-2xl flex items-center justify-center mb-6 border border-primary/20 shadow-[0_0_30px_rgba(233,179,255,0.1)]">
+            {channel ? <Hash size="44" className="text-primary" /> : <Users size="44" className="text-primary" />}
           </div>
           <h1 className="text-white text-4xl font-display font-bold mb-3 tracking-tight">Welcome to {channel ? `#${channel.name}` : 'the conversation'}!</h1>
-          <p className="text-lontera-muted text-lg">This is the start of the {channel ? `#${channel.name} channel` : 'conversation'}. Let's make it legendary.</p>
+          <p className="text-on-surface-variant text-lg">This is the start of the {channel ? `#${channel.name} channel` : 'conversation'}. Let's make it legendary.</p>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -525,12 +525,12 @@ const ChatArea = () => {
               <img src={m.authorPhoto || `https://api.dicebear.com/7.x/initials/svg?seed=${m.authorName}`} className="h-10 w-10 rounded-xl mt-1 object-cover border border-white/5" alt="" />
               <div className="flex-1">
                 <div className="flex items-baseline gap-3 mb-1">
-                  <span className="text-lontera-primary font-bold text-sm hover:underline cursor-pointer tracking-wide">{m.authorName}</span>
-                  <span className="text-[10px] text-lontera-muted uppercase font-bold tracking-tighter opacity-60">
+                  <span className="text-primary font-bold text-sm hover:underline cursor-pointer tracking-wide">{m.authorName}</span>
+                  <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-tighter opacity-60">
                     {m.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <div className="text-lontera-on-surface chat-content">
+                <div className="text-on-surface chat-content">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {m.content}
                   </ReactMarkdown>
@@ -541,19 +541,19 @@ const ChatArea = () => {
           
           {/* Example Bot Message from Design */}
           <div className="flex gap-4 group hover:bg-white/[0.02] -mx-4 px-4 py-2 rounded-xl transition-all">
-            <div className="w-10 h-10 rounded-xl mt-1 bg-lontera-surface flex items-center justify-center border border-white/10 relative">
-              <div className="absolute -inset-1 rounded-xl bg-lontera-secondary/20 blur-sm"></div>
-              <Cpu size="20" className="text-lontera-secondary relative z-10" />
+            <div className="w-10 h-10 rounded-xl mt-1 bg-surface-container flex items-center justify-center border border-white/10 relative">
+              <div className="absolute -inset-1 rounded-xl bg-secondary/20 blur-sm"></div>
+              <Cpu size="20" className="text-secondary relative z-10" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-3 mb-1">
-                <span className="font-bold text-lontera-secondary font-display text-sm flex items-center gap-2">
+                <span className="font-bold text-secondary font-display text-sm flex items-center gap-2">
                   NeonBot
-                  <span className="bg-lontera-primary/20 text-lontera-primary text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-sm tracking-widest">BOT</span>
+                  <span className="bg-primary/20 text-primary text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-sm tracking-widest">BOT</span>
                 </span>
-                <span className="text-lontera-muted text-[10px] font-bold opacity-60">Today at 10:45 AM</span>
+                <span className="text-on-surface-variant text-[10px] font-bold opacity-60">Today at 10:45 AM</span>
               </div>
-              <div className="text-lontera-on-surface font-sans text-[15px] leading-relaxed mb-3">
+              <div className="text-on-surface font-sans text-[15px] leading-relaxed mb-3">
                 Check out this crazy screenshot from the new Cyber-punk update. The lighting engine is insane.
               </div>
               <div className="inline-block p-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl max-w-sm overflow-hidden group/img">
@@ -565,20 +565,20 @@ const ChatArea = () => {
       </div>
 
       <div className="p-6 pt-0">
-        <form onSubmit={sendMessage} className="bg-[#2a2a2c] rounded-2xl flex items-center px-5 py-3.5 gap-4 shadow-xl border-b-2 border-transparent focus-within:border-lontera-secondary transition-all">
-          <div className="bg-lontera-muted/20 hover:bg-lontera-primary transition-all h-7 w-7 rounded-full flex items-center justify-center cursor-pointer group">
-            <Plus size="18" className="text-lontera-muted group-hover:text-black" />
+        <form onSubmit={sendMessage} className="bg-surface-container-highest rounded-2xl flex items-center px-5 py-3.5 gap-4 shadow-xl border-b-2 border-transparent focus-within:border-secondary transition-all">
+          <div className="bg-on-surface-variant/20 hover:bg-primary transition-all h-7 w-7 rounded-full flex items-center justify-center cursor-pointer group">
+            <Plus size="18" className="text-on-surface-variant group-hover:text-black" />
           </div>
           <input 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={placeholder} 
-            className="flex-1 bg-transparent outline-none text-lontera-on-surface placeholder:text-lontera-outline text-[15px] font-medium" 
+            className="flex-1 bg-transparent outline-none text-on-surface placeholder:text-outline text-[15px] font-medium" 
           />
-          <div className="flex items-center gap-4 text-lontera-muted">
+          <div className="flex items-center gap-4 text-on-surface-variant">
             <Plus size="20" className="cursor-pointer hover:text-white" />
             <Search size="20" className="cursor-pointer hover:text-white" />
-            <button type="submit" className="text-lontera-primary hover:scale-110 transition-transform">
+            <button type="submit" className="text-primary hover:scale-110 transition-transform">
               <Send size="22" />
             </button>
           </div>
@@ -780,16 +780,16 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-[#131315] h-screen">
-      <div className="h-14 border-b border-white/5 flex items-center px-6 gap-3 shadow-sm bg-[#1a1a1c]/50 backdrop-blur-md">
-        <Volume2 size="20" className="text-lontera-muted" />
+    <div className="flex-1 flex flex-col bg-surface-container-low h-screen">
+      <div className="h-14 border-b border-white/5 flex items-center px-6 gap-3 shadow-sm bg-surface-container/50 backdrop-blur-md">
+        <Volume2 size="20" className="text-on-surface-variant" />
         <h3 className="text-white font-display font-bold tracking-wide">{channelName}</h3>
       </div>
       
       <div className="flex-1 p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto content-start">
         {/* Local Stream */}
         {localStream && (
-          <div className="aspect-video bg-[#1e1f22] rounded-2xl overflow-hidden relative group ring-2 ring-lontera-primary/50 shadow-[0_0_40px_rgba(233,179,255,0.05)]">
+          <div className="aspect-video bg-surface-container-highest rounded-2xl overflow-hidden relative group ring-2 ring-primary/50 shadow-[0_0_40px_rgba(233,179,255,0.05)]">
             <VideoPlayer 
               stream={localStream} 
               muted={true} 
@@ -797,8 +797,8 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
               displayName="You" 
             />
             {!localStream.getVideoTracks()[0]?.enabled && (
-              <div className="absolute inset-0 bg-lontera-surface flex items-center justify-center">
-                 <img src={profileData?.photoURL || user?.photoURL || ''} className="h-24 w-24 rounded-full border-4 border-lontera-bg shadow-xl" alt="user" />
+              <div className="absolute inset-0 bg-surface-container flex items-center justify-center">
+                 <img src={profileData?.photoURL || user?.photoURL || ''} className="h-24 w-24 rounded-full border-4 border-background shadow-xl" alt="user" />
               </div>
             )}
             <div className="absolute top-4 right-4 bg-black/60 p-2 rounded-full backdrop-blur-md border border-white/10">
@@ -811,7 +811,7 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
         {Object.entries(remoteStreams).map(([uid, stream]) => {
           const participant = participants.find(p => p.uid === uid);
           return (
-            <div key={uid} className="aspect-video bg-[#1e1f22] rounded-2xl overflow-hidden relative border border-white/5">
+            <div key={uid} className="aspect-video bg-surface-container-highest rounded-2xl overflow-hidden relative border border-white/5">
               <VideoPlayer 
                 stream={stream as MediaStream} 
                 className="w-full h-full" 
@@ -822,7 +822,7 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
         })}
       </div>
 
-      <div className="h-24 flex items-center justify-center gap-6 bg-[#1a1a1c] border-t border-white/5 relative z-20 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center justify-center gap-4 glass-floating p-4 rounded-full z-50 shadow-2xl">
         <button 
           onClick={() => {
             if (localStream) {
@@ -831,24 +831,24 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
               setIsVideo(videoTrack?.enabled || false);
             }
           }}
-          className={`p-5 rounded-2xl transition-all shadow-lg ${isVideo ? 'bg-white text-black scale-110' : 'bg-lontera-surface text-white hover:bg-white/10 border border-white/10'}`}
+          className={`p-4 rounded-full transition-all ${isVideo ? 'bg-primary text-on-primary' : 'bg-white/10 text-white hover:bg-white/20'}`}
         >
-          <Video size="24" />
+          <Video size="22" />
         </button>
-        <button className="p-5 bg-lontera-surface text-white hover:bg-white/10 rounded-2xl transition-all border border-white/10 shadow-lg">
-          <Monitor size="24" />
+        <button className="p-4 bg-white/10 text-white hover:bg-white/20 rounded-full transition-all">
+          <Monitor size="22" />
         </button>
         <button 
           onClick={toggleMute}
-          className={`p-5 rounded-2xl transition-all border border-white/10 shadow-lg group ${isMuted ? 'bg-red-500/20 text-red-500' : 'bg-lontera-surface text-white hover:bg-white/10'}`}
+          className={`p-4 rounded-full transition-all group ${isMuted ? 'bg-error text-on-error' : 'bg-white/10 text-white hover:bg-white/20'}`}
         >
-          <Mic size="24" className="transition-colors" />
+          <Mic size="22" />
         </button>
         <button 
           onClick={leaveCall}
-          className="p-5 bg-[#da373c] text-white hover:bg-[#a92b2f] rounded-2xl transition-all shadow-[0_0_20px_rgba(218,55,60,0.3)] hover:shadow-[0_0_30px_rgba(218,55,60,0.5)] transform rotate-[135deg]"
+          className="p-4 bg-error text-on-error hover:bg-error-container rounded-full transition-all shadow-lg"
         >
-          <LogOut size="24" />
+          <LogOut size="22" />
         </button>
       </div>
     </div>
@@ -886,14 +886,14 @@ const UserList = () => {
   const offlineMembers = members.filter(m => m.status !== 'online');
 
   return (
-    <div className="w-64 bg-[#1e1f22]/40 backdrop-blur-2xl border-l border-white/5 h-full hidden lg:flex flex-col">
-      <div className="p-6 pb-4 flex items-center justify-between border-b border-white/5 bg-black/5">
+    <div className="w-64 glass-surface backdrop-blur-2xl border-l border-white/5 h-full hidden lg:flex flex-col">
+      <div className="p-6 pb-4 flex items-center justify-between border-b border-white/5 bg-white/5">
         <h3 className="font-display font-bold text-white text-sm uppercase tracking-widest leading-tight">Members</h3>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-6">
         <div>
-          <h4 className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-[0.2em] mb-4 pl-2">Online â€” {onlineMembers.length}</h4>
+          <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4 pl-2">Online â€” {onlineMembers.length}</h4>
           <div className="space-y-1">
             {onlineMembers.map(m => (
               <div 
@@ -906,9 +906,9 @@ const UserList = () => {
                   <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-green-500 rounded-full border-4 border-[#1e1f22]" />
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-lontera-primary text-sm font-bold truncate group-hover:text-lontera-on-surface transition-colors">{m.displayName}</span>
+                  <span className="text-primary text-sm font-bold truncate group-hover:text-on-surface transition-colors">{m.displayName}</span>
                   {m.customStatus && (
-                    <span className="text-[10px] text-lontera-secondary font-bold truncate flex items-center gap-1">
+                    <span className="text-[10px] text-secondary font-bold truncate flex items-center gap-1">
                       <Gamepad2 size="10" />
                       {m.customStatus}
                     </span>
@@ -920,7 +920,7 @@ const UserList = () => {
         </div>
 
         <div>
-           <h4 className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-[0.2em] mb-4 pl-2">Offline â€” {offlineMembers.length}</h4>
+           <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4 pl-2">Offline â€” {offlineMembers.length}</h4>
            <div className="space-y-1 opacity-50 transition-opacity hover:opacity-80">
               {offlineMembers.map(m => (
                 <div 
@@ -932,7 +932,7 @@ const UserList = () => {
                     <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-10 w-10 rounded-xl object-cover grayscale" alt="" />
                     <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-gray-500 rounded-full border-4 border-[#1e1f22]" />
                   </div>
-                  <span className="text-lontera-muted text-sm font-medium truncate">{m.displayName}</span>
+                  <span className="text-on-surface-variant text-sm font-medium truncate">{m.displayName}</span>
                 </div>
               ))}
            </div>
@@ -980,64 +980,64 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-2xl bg-lontera-bg border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex"
+            className="relative w-full max-w-2xl glass-floating rounded-3xl overflow-hidden shadow-2xl flex"
           >
-            <div className="w-48 bg-[#0d0d0f] p-6 border-r border-white/5 flex flex-col gap-2">
-              <h3 className="text-xs font-display font-bold text-lontera-muted uppercase tracking-widest mb-4">User Settings</h3>
-              <button className="text-left px-3 py-2 rounded-lg bg-lontera-primary/10 text-lontera-primary font-bold text-sm">My Account</button>
-              <button className="text-left px-3 py-2 rounded-lg text-lontera-muted hover:bg-white/5 transition-all text-sm font-medium">Privacy & Safety</button>
-              <button className="text-left px-3 py-2 rounded-lg text-lontera-muted hover:bg-white/5 transition-all text-sm font-medium">Appearance</button>
+            <div className="w-48 bg-background p-6 border-r border-white/5 flex flex-col gap-2">
+              <h3 className="text-xs font-display font-bold text-on-surface-variant uppercase tracking-widest mb-4">User Settings</h3>
+              <button className="text-left px-3 py-2 rounded-lg bg-primary/10 text-primary font-bold text-sm">My Account</button>
+              <button className="text-left px-3 py-2 rounded-lg text-on-surface-variant hover:bg-white/5 transition-all text-sm font-medium">Privacy & Safety</button>
+              <button className="text-left px-3 py-2 rounded-lg text-on-surface-variant hover:bg-white/5 transition-all text-sm font-medium">Appearance</button>
             </div>
             <div className="flex-1 p-8 overflow-y-auto max-h-[80vh] custom-scrollbar">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-display font-bold text-white">My Account</h2>
-                <Plus onClick={onClose} className="transform rotate-45 text-lontera-muted cursor-pointer hover:text-white" />
+                <Plus onClick={onClose} className="transform rotate-45 text-on-surface-variant cursor-pointer hover:text-white" />
               </div>
 
               <div className="space-y-8">
-                <div className="bg-[#1a1a1c] p-6 rounded-2xl border border-white/5 flex items-center gap-6">
+                <div className="bg-surface-container-high p-6 rounded-2xl border border-white/5 flex items-center gap-6">
                   <div className="relative group">
                     <img 
                       src={photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName}`} 
-                      className="h-20 w-20 rounded-2xl object-cover border-2 border-lontera-primary/30"
+                      className="h-20 w-20 rounded-2xl object-cover border-2 border-primary/30"
                       alt="avatar"
                     />
-                    <div className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer border-2 border-lontera-primary">
+                    <div className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer border-2 border-primary">
                       <Palette size="20" className="text-white" />
                     </div>
                   </div>
                   <div className="flex-1">
                     <h4 className="text-white font-bold text-lg mb-1">{displayName}</h4>
-                    <p className="text-lontera-muted text-xs uppercase tracking-widest font-bold">Online</p>
+                    <p className="text-on-surface-variant text-xs uppercase tracking-widest font-bold">Online</p>
                   </div>
-                  <button className="neon-button py-2 px-6 text-sm font-bold">Edit Profile</button>
+                  <button className="btn-primary py-2 px-6 text-sm font-bold">Edit Profile</button>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Display Name</label>
+                    <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Display Name</label>
                     <input 
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all"
+                      className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Custom Status</label>
+                    <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Custom Status</label>
                     <input 
                       value={customStatus}
                       onChange={(e) => setCustomStatus(e.target.value)}
                       placeholder="What's on your mind?"
-                      className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all"
+                      className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Avatar URL (Optional)</label>
+                    <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Avatar URL (Optional)</label>
                     <input 
                       value={photoURL}
                       onChange={(e) => setPhotoURL(e.target.value)}
                       placeholder="HTTPS link to image"
-                      className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all"
+                      className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all"
                     />
                   </div>
                 </div>
@@ -1045,7 +1045,7 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
                 <div className="flex gap-4 pt-4">
                   <button 
                     onClick={handleSave}
-                    className="flex-1 bg-lontera-primary text-[#310048] font-display font-bold py-3 rounded-xl shadow-[0_0_20px_rgba(233,179,255,0.2)] hover:bg-lontera-primary/80 transition-all"
+                    className="flex-1 bg-primary text-[#310048] font-display font-bold py-3 rounded-xl shadow-[0_0_20px_rgba(233,179,255,0.2)] hover:bg-primary/80 transition-all"
                   >
                     Save Changes
                   </button>
@@ -1128,26 +1128,26 @@ const AuthScreen = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#0d0d0f] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="h-screen w-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
       {/* Background glows */}
       <div className="absolute inset-0 pointer-events-none opacity-40">
-        <div className="absolute top-[20%] left-[10%] w-[40vw] h-[40vw] bg-lontera-primary/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] bg-lontera-secondary/10 rounded-full blur-[100px]" />
+        <div className="absolute top-[20%] left-[10%] w-[40vw] h-[40vw] bg-primary/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] bg-secondary/10 rounded-full blur-[100px]" />
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="glass-panel p-10 rounded-3xl w-full max-w-md border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
+        className="glass-floating p-10 rounded-3xl w-full max-w-md border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
       >
         {/* Logo + title */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-lontera-primary/10 rounded-3xl border-2 border-lontera-primary/20 flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(233,179,255,0.15)] transform rotate-12 hover:rotate-0 transition-transform duration-500">
-            <Cpu size="40" className="text-lontera-primary" />
+          <div className="w-20 h-20 bg-primary/10 rounded-3xl border-2 border-primary/20 flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(233,179,255,0.15)] transform rotate-12 hover:rotate-0 transition-transform duration-500">
+            <Cpu size="40" className="text-primary" />
           </div>
           <h1 className="text-white text-3xl font-display font-bold tracking-tighter">Welcome to Lontera</h1>
-          <p className="text-lontera-muted text-sm mt-2 text-center leading-relaxed">
+          <p className="text-on-surface-variant text-sm mt-2 text-center leading-relaxed">
             {tab === 'register' ? 'Create your account to get started.' : 'Sign in to continue your journey.'}
           </p>
         </div>
@@ -1159,8 +1159,8 @@ const AuthScreen = () => {
             onClick={() => { setTab('register'); setError(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-display font-bold transition-all ${
               tab === 'register'
-                ? 'bg-lontera-primary text-[#310048] shadow-[0_0_15px_rgba(233,179,255,0.2)]'
-                : 'text-lontera-muted hover:text-white'
+                ? 'bg-primary text-[#310048] shadow-[0_0_15px_rgba(233,179,255,0.2)]'
+                : 'text-on-surface-variant hover:text-white'
             }`}
           >
             Register
@@ -1170,8 +1170,8 @@ const AuthScreen = () => {
             onClick={() => { setTab('login'); setError(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-display font-bold transition-all ${
               tab === 'login'
-                ? 'bg-lontera-primary text-[#310048] shadow-[0_0_15px_rgba(233,179,255,0.2)]'
-                : 'text-lontera-muted hover:text-white'
+                ? 'bg-primary text-[#310048] shadow-[0_0_15px_rgba(233,179,255,0.2)]'
+                : 'text-on-surface-variant hover:text-white'
             }`}
           >
             Log In
@@ -1194,17 +1194,17 @@ const AuthScreen = () => {
                 <img
                   src={avatarPreview}
                   alt="avatar preview"
-                  className="h-12 w-12 rounded-xl object-cover border-2 border-lontera-primary/30 bg-lontera-surface flex-shrink-0"
+                  className="h-12 w-12 rounded-xl object-cover border-2 border-primary/30 bg-surface-container flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-0.5">Avatar Preview</p>
+                  <p className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Avatar Preview</p>
                   <p className="text-white text-sm font-medium truncate">{regName || 'Your name'}</p>
-                  <p className="text-lontera-muted text-[11px]">Auto-generated · paste URL below to change</p>
+                  <p className="text-on-surface-variant text-[11px]">Auto-generated · paste URL below to change</p>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
                   Display Name <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -1214,12 +1214,12 @@ const AuthScreen = () => {
                   placeholder="e.g. StargazerX"
                   maxLength={32}
                   autoComplete="off"
-                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                  className="w-full bg-surface-container-highest border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-outline text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
                   Email <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -1229,12 +1229,12 @@ const AuthScreen = () => {
                   onChange={e => setRegEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
-                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                  className="w-full bg-surface-container-highest border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-outline text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
                   Password <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -1244,12 +1244,12 @@ const AuthScreen = () => {
                   onChange={e => setRegPassword(e.target.value)}
                   placeholder="Min. 8 characters"
                   autoComplete="new-password"
-                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                  className="w-full bg-surface-container-highest border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-outline text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
                   Confirm Password <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -1259,20 +1259,20 @@ const AuthScreen = () => {
                   onChange={e => setRegConfirm(e.target.value)}
                   placeholder="Repeat password"
                   autoComplete="new-password"
-                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                  className="w-full bg-surface-container-highest border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-outline text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
-                  Avatar URL <span className="text-lontera-muted font-normal normal-case tracking-normal">(optional)</span>
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
+                  Avatar URL <span className="text-on-surface-variant font-normal normal-case tracking-normal">(optional)</span>
                 </label>
                 <input
                   id="register-avatar"
                   value={regAvatar}
                   onChange={e => setRegAvatar(e.target.value)}
                   placeholder="https://…"
-                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                  className="w-full bg-surface-container-highest border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-outline text-sm"
                 />
               </div>
 
@@ -1284,7 +1284,7 @@ const AuthScreen = () => {
                 id="register-submit"
                 type="submit"
                 disabled={submitting}
-                className="w-full neon-button py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full btn-primary py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Creating account…' : 'Create Account →'}
               </button>
@@ -1300,7 +1300,7 @@ const AuthScreen = () => {
               className="flex flex-col gap-4"
             >
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
                   Email
                 </label>
                 <input
@@ -1310,12 +1310,12 @@ const AuthScreen = () => {
                   onChange={e => setLoginEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
-                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                  className="w-full bg-surface-container-highest border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-outline text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-1.5">
                   Password
                 </label>
                 <input
@@ -1325,7 +1325,7 @@ const AuthScreen = () => {
                   onChange={e => setLoginPassword(e.target.value)}
                   placeholder="Your password"
                   autoComplete="current-password"
-                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                  className="w-full bg-surface-container-highest border border-white/10 focus:border-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-outline text-sm"
                 />
               </div>
 
@@ -1337,17 +1337,17 @@ const AuthScreen = () => {
                 id="login-submit"
                 type="submit"
                 disabled={submitting}
-                className="w-full neon-button py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full btn-primary py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? 'Signing in…' : 'Sign In →'}
               </button>
 
-              <p className="text-center text-lontera-muted text-xs pt-1">
+              <p className="text-center text-on-surface-variant text-xs pt-1">
                 Don't have an account?{' '}
                 <button
                   type="button"
                   onClick={() => { setTab('register'); setError(''); }}
-                  className="text-lontera-primary hover:underline font-bold"
+                  className="text-primary hover:underline font-bold"
                 >
                   Register here
                 </button>
@@ -1356,9 +1356,9 @@ const AuthScreen = () => {
           )}
         </AnimatePresence>
 
-        <div className="mt-6 pt-5 border-t border-white/5 flex justify-between text-[10px] font-display font-bold uppercase tracking-widest text-lontera-muted">
-          <span className="hover:text-lontera-primary cursor-pointer transition-colors">Privacy</span>
-          <span className="hover:text-lontera-primary cursor-pointer transition-colors">Terms</span>
+        <div className="mt-6 pt-5 border-t border-white/5 flex justify-between text-[10px] font-display font-bold uppercase tracking-widest text-on-surface-variant">
+          <span className="hover:text-primary cursor-pointer transition-colors">Privacy</span>
+          <span className="hover:text-primary cursor-pointer transition-colors">Terms</span>
         </div>
       </motion.div>
     </div>
@@ -1371,10 +1371,10 @@ const LonteraApp = () => {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-[#0d0d0f] flex items-center justify-center">
+      <div className="h-screen w-screen bg-background flex items-center justify-center">
         <div className="relative flex items-center justify-center">
-          <div className="absolute h-16 w-16 bg-lontera-primary/20 rounded-full blur-xl animate-pulse" />
-          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-lontera-primary" />
+          <div className="absolute h-16 w-16 bg-primary/20 rounded-full blur-xl animate-pulse" />
+          <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary" />
         </div>
       </div>
     );
@@ -1385,11 +1385,11 @@ const LonteraApp = () => {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-lontera-bg font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-background font-sans">
       <TopNavBar />
       <div className="flex-1 flex mt-16 h-[calc(100vh-64px)] overflow-hidden relative">
         <SidebarServers />
-        <div className="flex-1 flex ml-18 bg-[#131315]">
+        <div className="flex-1 flex ml-18 bg-surface-container-low">
           <SidebarChannels onOpenSettings={() => setIsSettingsOpen(true)} />
           <ChatArea />
           <UserList />

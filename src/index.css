@@ -1,37 +1,103 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* Design Palette */
-  --color-lontera-bg: #0d0725; /* Dark tint of the palette's blue #210B92 */
-  --color-lontera-surface: #180d44; /* Slightly lighter blue */
-  --color-lontera-primary: #FF674A; /* Orange */
-  --color-lontera-secondary: #B0CD51; /* Light Green */
-  --color-lontera-on-surface: #e5e1e4;
-  --color-lontera-outline: #382c6d;
-  --color-lontera-muted: #9aa1bc;
-  
+  --color-surface: #0b1326;
+  --color-surface-dim: #0b1326;
+  --color-surface-bright: #31394d;
+  --color-surface-container-lowest: #060e20;
+  --color-surface-container-low: #131b2e;
+  --color-surface-container: #171f33;
+  --color-surface-container-high: #222a3d;
+  --color-surface-container-highest: #2d3449;
+  --color-on-surface: #dae2fd;
+  --color-on-surface-variant: #ddc1ae;
+  --color-inverse-surface: #dae2fd;
+  --color-inverse-on-surface: #283044;
+  --color-outline: #a48c7a;
+  --color-outline-variant: #564334;
+  --color-surface-tint: #ffb77d;
+  --color-primary: #ffb77d;
+  --color-on-primary: #4d2600;
+  --color-primary-container: #ff8c00;
+  --color-on-primary-container: #623200;
+  --color-inverse-primary: #904d00;
+  --color-secondary: #bdf4ff;
+  --color-on-secondary: #00363d;
+  --color-secondary-container: #00e3fd;
+  --color-on-secondary-container: #00616d;
+  --color-tertiary: #d1bcff;
+  --color-on-tertiary: #3c0090;
+  --color-tertiary-container: #b799ff;
+  --color-on-tertiary-container: #4d00b4;
+  --color-error: #ffb4ab;
+  --color-on-error: #690005;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-primary-fixed: #ffdcc3;
+  --color-primary-fixed-dim: #ffb77d;
+  --color-on-primary-fixed: #2f1500;
+  --color-on-primary-fixed-variant: #6e3900;
+  --color-secondary-fixed: #9cf0ff;
+  --color-secondary-fixed-dim: #00daf3;
+  --color-on-secondary-fixed: #001f24;
+  --color-on-secondary-fixed-variant: #004f58;
+  --color-tertiary-fixed: #e9ddff;
+  --color-tertiary-fixed-dim: #d1bcff;
+  --color-on-tertiary-fixed: #23005b;
+  --color-on-tertiary-fixed-variant: #5700c9;
+  --color-background: #0b1326;
+  --color-on-background: #dae2fd;
+  --color-surface-variant: #2d3449;
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", sans-serif;
+  --font-display: "Manrope", sans-serif;
+  --font-mono-ui: "Space Grotesk", monospace;
+
+  --radius-sm: 0.25rem;
+  --radius-DEFAULT: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
 }
 
 @layer base {
   body {
-    @apply bg-lontera-bg text-lontera-on-surface antialiased overflow-hidden selection:bg-lontera-primary selection:text-black;
+    @apply bg-background text-on-background antialiased overflow-hidden selection:bg-primary selection:text-on-primary font-sans;
+  }
+  h1, h2, h3, .font-display {
+    @apply font-display;
   }
 }
 
 @layer components {
-  .glass-panel {
-    @apply bg-black/40 backdrop-blur-2xl border-white/5;
+  .glass-surface {
+    @apply bg-white/5 backdrop-blur-[16px] border border-white/10;
   }
   
-  .neon-button {
-    @apply bg-lontera-primary/20 text-lontera-primary border border-lontera-primary/30 hover:bg-lontera-primary/30 transition-all duration-300 rounded-lg;
+  .glass-floating {
+    @apply bg-surface-container/80 backdrop-blur-[32px] border border-white/20 shadow-[0_0_40px_rgba(255,183,125,0.05)];
   }
-  
+
+  .glass-overlay {
+    @apply bg-black/40 backdrop-blur-md;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold shadow-[0_0_20px_rgba(255,183,125,0.2)] hover:shadow-[0_0_30px_rgba(255,183,125,0.4)] transition-all duration-300;
+  }
+
+  .btn-ghost {
+    @apply bg-white/5 border border-white/10 text-on-surface hover:bg-white/15 transition-all duration-300;
+  }
+
+  .input-glass {
+    @apply bg-surface-container/50 border border-white/10 text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all duration-300;
+  }
+
   .sidebar-icon-v2 {
-    @apply relative flex items-center justify-center h-12 w-12 rounded-xl border border-white/10 hover:border-lontera-primary/50 bg-white/5 hover:bg-white/10 transition-all duration-300 grayscale hover:grayscale-0 cursor-pointer overflow-hidden;
+    @apply relative flex items-center justify-center h-12 w-12 rounded-xl border border-white/10 hover:border-primary/50 bg-white/5 hover:bg-white/10 transition-all duration-300 cursor-pointer overflow-hidden;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
@@ -41,37 +107,15 @@
     @apply bg-transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-lontera-outline/50 rounded-full hover:bg-lontera-outline;
+    @apply bg-outline/30 rounded-full hover:bg-outline/50;
   }
 
-  /* Markdown Styles for Chat */
-  .chat-content {
-    @apply leading-relaxed text-[15px];
-  }
-  .chat-content strong {
-    @apply font-bold text-white;
-  }
-  .chat-content em {
-    @apply italic;
-  }
-  .chat-content code {
-    @apply bg-black/40 px-1.5 py-0.5 rounded font-mono text-[13px] text-lontera-secondary border border-white/5;
-  }
-  .chat-content pre {
-    @apply bg-[#0d0d0f] p-3 rounded-xl border border-white/10 my-2 overflow-x-auto;
-  }
-  .chat-content pre code {
-    @apply bg-transparent p-0 border-none block;
-  }
-  .chat-content blockquote {
-    @apply border-l-4 border-lontera-primary/50 pl-4 my-2 text-white/50 italic;
-  }
-  .chat-content ul {
-    @apply list-disc list-inside space-y-1 my-2;
-  }
-  .chat-content ol {
-    @apply list-decimal list-inside space-y-1 my-2;
-  }
+  /* Typography shortcuts from design.md */
+  .text-h1 { @apply text-[40px] font-bold leading-[1.2] tracking-[-0.02em]; }
+  .text-h2 { @apply text-[32px] font-semibold leading-[1.3] tracking-[-0.01em]; }
+  .text-h3 { @apply text-[24px] font-semibold leading-[1.4]; }
+  .text-body-lg { @apply text-[18px] font-normal leading-[1.6]; }
+  .text-body-md { @apply text-[16px] font-normal leading-[1.6]; }
+  .text-label-sm { @apply text-[13px] font-medium leading-[1.2] tracking-[0.05em] uppercase; }
+  .text-mono-ui { @apply font-mono-ui text-[14px] font-normal leading-[1.0]; }
 }
-
-
