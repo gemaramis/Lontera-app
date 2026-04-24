@@ -1842,6 +1842,25 @@ const FriendsView = () => {
     setCurrentConversationId(convId);
   };
 
+  const cleanupIncompleteUsers = async () => {
+    if (!window.confirm("Clean up all accounts that are missing a display name or status?")) return;
+    try {
+      const snap = await getDocs(collection(db, 'users'));
+      let count = 0;
+      for (const d of snap.docs) {
+        const data = d.data();
+        if (!data.displayName || !data.status) {
+          await deleteDoc(doc(db, 'users', d.id));
+          count++;
+        }
+      }
+      alert(`Cleaned up ${count} incomplete accounts.`);
+    } catch (err: any) {
+      console.error("Cleanup error:", err);
+      alert(`Cleanup failed: ${err.message}`);
+    }
+  };
+
   const filteredUsers = users.filter(u => u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) && !friends.some(f => f.id === u.id));
   const onlineFriends = friends.filter(f => f.status === 'online');
   const pendingIncoming = requests.filter(r => r.status === 'pending');
@@ -1916,6 +1935,18 @@ const FriendsView = () => {
                   )}
                 </div>
               ))}
+            </div>
+            </div>
+            
+            <div className="mt-12 pt-8 border-t border-white/5">
+              <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-4">Account Maintenance</h4>
+              <button 
+                onClick={cleanupIncompleteUsers}
+                className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-widest flex items-center gap-2 transition-colors"
+              >
+                <Trash2 size="14" />
+                Clean up incomplete profiles
+              </button>
             </div>
           </div>
         ) : activeTab === 'pending' ? (
