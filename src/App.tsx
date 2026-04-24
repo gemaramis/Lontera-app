@@ -337,6 +337,14 @@ const SidebarServers = () => {
 
   const createServer = async () => {
     if (!user) return;
+    
+    // Check limit: 3 servers per account
+    const ownedServersCount = servers.filter(s => s.ownerId === user.uid).length;
+    if (ownedServersCount >= 3) {
+      alert("Maximum limit reached: You can only create up to 3 servers.");
+      return;
+    }
+
     const name = prompt('Server Name:');
     if (name) {
       try {
