@@ -8,6 +8,7 @@ import {
   Headphones, 
   Plus, 
   LogOut,
+  PhoneOff,
   Video,
   Monitor,
   Search,
@@ -321,9 +322,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
             </button>
           )}
         </div>
-        <button className="w-full bg-primary hover:bg-primary/80 text-[#310048] font-display font-bold py-2 rounded-lg text-sm transition-all shadow-[0_0_15px_rgba(233,179,255,0.1)]">
-          Join Voice
-        </button>
+        
       </div>
       
       <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
@@ -848,7 +847,7 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
           onClick={leaveCall}
           className="p-4 bg-error text-on-error hover:bg-error-container rounded-full transition-all shadow-lg"
         >
-          <LogOut size="22" />
+          <PhoneOff size="22" />
         </button>
       </div>
     </div>
@@ -1010,7 +1009,7 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
                     <h4 className="text-white font-bold text-lg mb-1">{displayName}</h4>
                     <p className="text-on-surface-variant text-xs uppercase tracking-widest font-bold">Online</p>
                   </div>
-                  <button className="btn-primary py-2 px-6 text-sm font-bold">Edit Profile</button>
+                  <button disabled className="btn-primary py-2 px-6 text-sm font-bold opacity-50 cursor-default">Preview</button>
                 </div>
 
                 <div className="space-y-4">
