@@ -1093,9 +1093,7 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
         >
           {isVideo ? <Video size="22" /> : <VideoOff size="22" />}
         </button>
-        <button className="p-4 bg-white/10 text-white hover:bg-white/20 rounded-full transition-all" title="Share Screen">
-          <Monitor size="22" />
-        </button>
+
         <button 
           onClick={toggleMute}
           className={`p-4 rounded-full transition-all group flex items-center gap-2 ${isMuted ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
