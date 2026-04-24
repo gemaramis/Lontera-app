@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signInAnonymously, signOut } from 'firebase/auth';
+import {
+  User,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+} from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
 
@@ -15,7 +21,8 @@ interface AppContextType {
   setCurrentChannelId: (id: string | null) => void;
   setCurrentConversationId: (id: string | null) => void;
   updateProfile: (data: any) => Promise<void>;
-  signIn: (displayName: string, photoURL: string) => Promise<void>;
+  register: (displayName: string, email: string, password: string, photoURL: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -74,28 +81,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await setDoc(userRef, { ...data, lastSeen: new Date().toISOString() }, { merge: true });
   };
 
-  // Called from the registration screen with the chosen username + avatar
-  const signIn = async (displayName: string, photoURL: string) => {
-    let authUser = auth.currentUser;
-
-    // Sign in anonymously if not already signed in
-    if (!authUser) {
-      const result = await signInAnonymously(auth);
-      authUser = result.user;
-    }
+  /** Create a new account with email + password, then save the Firestore profile. */
+  const register = async (displayName: string, email: string, password: string, photoURL: string) => {
+    const credential = await createUserWithEmailAndPassword(auth, email, password);
+    const authUser = credential.user;
 
     const userRef = doc(db, 'users', authUser.uid);
     await setDoc(userRef, {
       uid: authUser.uid,
       displayName,
       photoURL,
-      email: '',
+      email,
       status: 'online',
       lastSeen: new Date().toISOString(),
-    }, { merge: true });
+    });
 
-    // Set profile data and clear setup flag
-    setProfileData({ uid: authUser.uid, displayName, photoURL, status: 'online' });
+    setProfileData({ uid: authUser.uid, displayName, photoURL, email, status: 'online' });
+    setNeedsSetup(false);
+    setUser(authUser);
+  };
+
+  /** Sign in to an existing account with email + password. */
+  const login = async (email: string, password: string) => {
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    const authUser = credential.user;
+
+    // Refresh profile from Firestore
+    const userRef = doc(db, 'users', authUser.uid);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      setProfileData(snap.data());
+    }
+
     setNeedsSetup(false);
     setUser(authUser);
   };
@@ -121,8 +138,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentChannelId,
       setCurrentConversationId,
       updateProfile,
-      signIn,
-      logout
+      register,
+      login,
+      logout,
     }}>
       {children}
     </AppContext.Provider>

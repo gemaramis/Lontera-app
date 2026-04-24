@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { 
   Hash, 
@@ -980,28 +980,63 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
   );
 };
 
-// Registration screen component
-const RegisterScreen = () => {
-  const { signIn } = useApp();
-  const [username, setUsername] = useState('');
-  const [customAvatar, setCustomAvatar] = useState('');
+// Auth screen — Register and Login tabs
+const AuthScreen = () => {
+  const { register, login } = useApp();
+  const [tab, setTab] = useState<'register' | 'login'>('register');
+
+  // Register state
+  const [regName, setRegName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirm, setRegConfirm] = useState('');
+  const [regAvatar, setRegAvatar] = useState('');
+
+  // Login state
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const avatarPreview = customAvatar.trim() ||
-    `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username || 'lontera')}`;
+  const avatarPreview = regAvatar.trim() ||
+    `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(regName || 'lontera')}`;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = username.trim();
-    if (trimmed.length < 3) { setError('Username must be at least 3 characters.'); return; }
-    if (trimmed.length > 32) { setError('Username must be 32 characters or fewer.'); return; }
     setError('');
+    const name = regName.trim();
+    if (name.length < 3) { setError('Display name must be at least 3 characters.'); return; }
+    if (name.length > 32) { setError('Display name must be 32 characters or fewer.'); return; }
+    if (!regEmail.includes('@')) { setError('Please enter a valid email address.'); return; }
+    if (regPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (regPassword !== regConfirm) { setError('Passwords do not match.'); return; }
     setSubmitting(true);
     try {
-      await signIn(trimmed, avatarPreview);
+      await register(name, regEmail, regPassword, avatarPreview);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong. Try again.');
+      const msg = err.code === 'auth/email-already-in-use'
+        ? 'That email is already registered. Try logging in.'
+        : err.message || 'Something went wrong. Try again.';
+      setError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!loginEmail || !loginPassword) { setError('Please fill in all fields.'); return; }
+    setSubmitting(true);
+    try {
+      await login(loginEmail, loginPassword);
+    } catch (err: any) {
+      const msg =
+        err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
+          ? 'Invalid email or password.'
+          : err.message || 'Something went wrong. Try again.';
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -1009,6 +1044,7 @@ const RegisterScreen = () => {
 
   return (
     <div className="h-screen w-screen bg-[#0d0d0f] flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Background glows */}
       <div className="absolute inset-0 pointer-events-none opacity-40">
         <div className="absolute top-[20%] left-[10%] w-[40vw] h-[40vw] bg-lontera-primary/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] bg-lontera-secondary/10 rounded-full blur-[100px]" />
@@ -1020,71 +1056,222 @@ const RegisterScreen = () => {
         transition={{ duration: 0.5 }}
         className="glass-panel p-10 rounded-3xl w-full max-w-md border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10"
       >
+        {/* Logo + title */}
         <div className="flex flex-col items-center mb-8">
           <div className="w-20 h-20 bg-lontera-primary/10 rounded-3xl border-2 border-lontera-primary/20 flex items-center justify-center mb-5 shadow-[0_0_40px_rgba(233,179,255,0.15)] transform rotate-12 hover:rotate-0 transition-transform duration-500">
             <Cpu size="40" className="text-lontera-primary" />
           </div>
-          <h1 className="text-white text-3xl font-display font-bold tracking-tighter">Create your account</h1>
-          <p className="text-lontera-muted text-sm mt-2 text-center leading-relaxed">No email required. Just pick a name and dive in.</p>
+          <h1 className="text-white text-3xl font-display font-bold tracking-tighter">Welcome to Lontera</h1>
+          <p className="text-lontera-muted text-sm mt-2 text-center leading-relaxed">
+            {tab === 'register' ? 'Create your account to get started.' : 'Sign in to continue your journey.'}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div className="flex items-center gap-4 bg-white/5 rounded-2xl p-4 border border-white/10">
-            <img
-              src={avatarPreview}
-              alt="avatar preview"
-              className="h-14 w-14 rounded-xl object-cover border-2 border-lontera-primary/30 bg-lontera-surface flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1">Avatar Preview</p>
-              <p className="text-white text-sm font-medium truncate">{username || 'Your username'}</p>
-              <p className="text-lontera-muted text-[11px] mt-0.5">Auto-generated · paste URL below to change</p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">
-              Username <span className="text-red-400">*</span>
-            </label>
-            <input
-              id="register-username"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="e.g. StargazerX"
-              maxLength={32}
-              autoComplete="off"
-              className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">
-              Avatar URL <span className="text-lontera-muted font-normal normal-case tracking-normal">(optional)</span>
-            </label>
-            <input
-              id="register-avatar"
-              value={customAvatar}
-              onChange={e => setCustomAvatar(e.target.value)}
-              placeholder="https://…"
-              className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
-            />
-          </div>
-
-          {error && (
-            <p className="text-red-400 text-sm font-medium bg-red-400/10 rounded-xl px-4 py-3 border border-red-400/20">{error}</p>
-          )}
-
+        {/* Tab switcher */}
+        <div className="flex bg-white/5 rounded-xl p-1 mb-6 border border-white/5">
           <button
-            id="register-submit"
-            type="submit"
-            disabled={submitting}
-            className="w-full neon-button py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+            id="auth-tab-register"
+            onClick={() => { setTab('register'); setError(''); }}
+            className={`flex-1 py-2 rounded-lg text-sm font-display font-bold transition-all ${
+              tab === 'register'
+                ? 'bg-lontera-primary text-[#310048] shadow-[0_0_15px_rgba(233,179,255,0.2)]'
+                : 'text-lontera-muted hover:text-white'
+            }`}
           >
-            {submitting ? 'Creating account…' : 'Enter Lontera →'}
+            Register
           </button>
-        </form>
+          <button
+            id="auth-tab-login"
+            onClick={() => { setTab('login'); setError(''); }}
+            className={`flex-1 py-2 rounded-lg text-sm font-display font-bold transition-all ${
+              tab === 'login'
+                ? 'bg-lontera-primary text-[#310048] shadow-[0_0_15px_rgba(233,179,255,0.2)]'
+                : 'text-lontera-muted hover:text-white'
+            }`}
+          >
+            Log In
+          </button>
+        </div>
 
-        <div className="mt-8 pt-6 border-t border-white/5 flex justify-between text-[10px] font-display font-bold uppercase tracking-widest text-lontera-muted">
+        <AnimatePresence mode="wait">
+          {tab === 'register' ? (
+            <motion.form
+              key="register"
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 12 }}
+              transition={{ duration: 0.2 }}
+              onSubmit={handleRegister}
+              className="flex flex-col gap-4"
+            >
+              {/* Avatar preview */}
+              <div className="flex items-center gap-4 bg-white/5 rounded-2xl p-4 border border-white/10">
+                <img
+                  src={avatarPreview}
+                  alt="avatar preview"
+                  className="h-12 w-12 rounded-xl object-cover border-2 border-lontera-primary/30 bg-lontera-surface flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-0.5">Avatar Preview</p>
+                  <p className="text-white text-sm font-medium truncate">{regName || 'Your name'}</p>
+                  <p className="text-lontera-muted text-[11px]">Auto-generated · paste URL below to change</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                  Display Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="register-username"
+                  value={regName}
+                  onChange={e => setRegName(e.target.value)}
+                  placeholder="e.g. StargazerX"
+                  maxLength={32}
+                  autoComplete="off"
+                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                  Email <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="register-email"
+                  type="email"
+                  value={regEmail}
+                  onChange={e => setRegEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                  Password <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="register-password"
+                  type="password"
+                  value={regPassword}
+                  onChange={e => setRegPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  autoComplete="new-password"
+                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                  Confirm Password <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="register-confirm"
+                  type="password"
+                  value={regConfirm}
+                  onChange={e => setRegConfirm(e.target.value)}
+                  placeholder="Repeat password"
+                  autoComplete="new-password"
+                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                  Avatar URL <span className="text-lontera-muted font-normal normal-case tracking-normal">(optional)</span>
+                </label>
+                <input
+                  id="register-avatar"
+                  value={regAvatar}
+                  onChange={e => setRegAvatar(e.target.value)}
+                  placeholder="https://…"
+                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                />
+              </div>
+
+              {error && (
+                <p className="text-red-400 text-sm font-medium bg-red-400/10 rounded-xl px-4 py-3 border border-red-400/20">{error}</p>
+              )}
+
+              <button
+                id="register-submit"
+                type="submit"
+                disabled={submitting}
+                className="w-full neon-button py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Creating account…' : 'Create Account →'}
+              </button>
+            </motion.form>
+          ) : (
+            <motion.form
+              key="login"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -12 }}
+              transition={{ duration: 0.2 }}
+              onSubmit={handleLogin}
+              className="flex flex-col gap-4"
+            >
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                  Email
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-1.5">
+                  Password
+                </label>
+                <input
+                  id="login-password"
+                  type="password"
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                  placeholder="Your password"
+                  autoComplete="current-password"
+                  className="w-full bg-[#1e1f22] border border-white/10 focus:border-lontera-primary rounded-xl px-4 py-3 text-white outline-none transition-all placeholder:text-lontera-outline text-sm"
+                />
+              </div>
+
+              {error && (
+                <p className="text-red-400 text-sm font-medium bg-red-400/10 rounded-xl px-4 py-3 border border-red-400/20">{error}</p>
+              )}
+
+              <button
+                id="login-submit"
+                type="submit"
+                disabled={submitting}
+                className="w-full neon-button py-4 font-display font-bold text-base mt-1 shadow-[0_0_25px_rgba(233,179,255,0.1)] active:scale-95 transform transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Signing in…' : 'Sign In →'}
+              </button>
+
+              <p className="text-center text-lontera-muted text-xs pt-1">
+                Don't have an account?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setTab('register'); setError(''); }}
+                  className="text-lontera-primary hover:underline font-bold"
+                >
+                  Register here
+                </button>
+              </p>
+            </motion.form>
+          )}
+        </AnimatePresence>
+
+        <div className="mt-6 pt-5 border-t border-white/5 flex justify-between text-[10px] font-display font-bold uppercase tracking-widest text-lontera-muted">
           <span className="hover:text-lontera-primary cursor-pointer transition-colors">Privacy</span>
           <span className="hover:text-lontera-primary cursor-pointer transition-colors">Terms</span>
         </div>
@@ -1109,7 +1296,7 @@ const LonteraApp = () => {
   }
 
   if (!user || needsSetup) {
-    return <RegisterScreen />;
+    return <AuthScreen />;
   }
 
   return (
