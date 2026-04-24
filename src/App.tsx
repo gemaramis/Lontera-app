@@ -32,7 +32,9 @@ import {
   Check,
   X,
   Mail,
-  MessageSquare
+  MessageSquare,
+  MicOff,
+  VideoOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -830,7 +832,13 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
         }
         localStreamRef.current = stream;
         setLocalStream(stream);
-        
+
+        // Disable video by default
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          videoTrack.enabled = false;
+          setIsVideo(false);
+        }
         // Join channel
         const participantRef = doc(db, `servers/${serverId}/channels/${channelId}/participants/${user?.uid}`);
         await setDoc(participantRef, {
@@ -1012,22 +1020,26 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
           onClick={() => {
             if (localStream) {
               const videoTrack = localStream.getVideoTracks()[0];
-              if (videoTrack) videoTrack.enabled = !videoTrack.enabled;
-              setIsVideo(videoTrack?.enabled || false);
+              if (videoTrack) {
+                videoTrack.enabled = !videoTrack.enabled;
+                setIsVideo(videoTrack.enabled);
+              }
             }
           }}
-          className={`p-4 rounded-full transition-all ${isVideo ? 'bg-primary text-on-primary' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          className={`p-4 rounded-full transition-all group flex items-center gap-2 ${isVideo ? 'bg-green-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          title={isVideo ? "Turn Off Video" : "Turn On Video"}
         >
-          <Video size="22" />
+          {isVideo ? <Video size="22" /> : <VideoOff size="22" />}
         </button>
-        <button className="p-4 bg-white/10 text-white hover:bg-white/20 rounded-full transition-all">
+        <button className="p-4 bg-white/10 text-white hover:bg-white/20 rounded-full transition-all" title="Share Screen">
           <Monitor size="22" />
         </button>
         <button 
           onClick={toggleMute}
-          className={`p-4 rounded-full transition-all group ${isMuted ? 'bg-error text-on-error' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          className={`p-4 rounded-full transition-all group flex items-center gap-2 ${isMuted ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          title={isMuted ? "Unmute" : "Mute"}
         >
-          <Mic size="22" />
+          {isMuted ? <MicOff size="22" /> : <Mic size="22" />}
         </button>
         <button 
           onClick={leaveCall}
