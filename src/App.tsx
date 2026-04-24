@@ -24,6 +24,8 @@ import {
   ChevronDown,
   Cpu,
   Send,
+  Trash2,
+  Shield,
   MoreHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -33,10 +35,70 @@ import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, set
 import { db } from './lib/firebase';
 
 
+const ChannelSettingsModal = ({ isOpen, onClose, channel, serverId }: { isOpen: boolean, onClose: () => void, channel: any, serverId: string }) => {
+  const [name, setName] = useState('');
+  useEffect(() => { if (channel) setName(channel.name); }, [channel, isOpen]);
+
+  const handleSave = async () => {
+    if (!channel || !serverId) return;
+    const channelRef = doc(db, `servers/${serverId}/channels`, channel.id);
+    await setDoc(channelRef, { name }, { merge: true });
+    onClose();
+  };
+
+  const handleDelete = async () => {
+    if (!channel || !serverId || !window.confirm('Delete this channel?')) return;
+    const channelRef = doc(db, `servers/${serverId}/channels`, channel.id);
+    await deleteDoc(channelRef);
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/80 backdrop-blur-md" />
+          <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative w-full max-w-md glass-floating rounded-3xl p-8 shadow-2xl">
+            <h2 className="text-xl font-display font-bold text-white mb-6">Channel Settings</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Channel Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button onClick={handleSave} className="flex-1 btn-primary py-2.5 rounded-xl text-sm">Save</button>
+              <button onClick={handleDelete} className="p-2.5 bg-error/20 text-error rounded-xl hover:bg-error/30 transition-all"><Trash2 size="18" /></button>
+              <button onClick={onClose} className="flex-1 bg-white/5 text-white py-2.5 rounded-xl text-sm">Cancel</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+
 const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onClose: () => void, server: any }) => {
+  const { user } = useApp();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('');
+  const [members, setMembers] = useState<any[]>([]);
+  const [tab, setTab] = useState<'general' | 'members'>('general');
+
+  useEffect(() => {
+    if (server && isOpen) {
+      const unsub = onSnapshot(collection(db, `servers/${server.id}/members`), async (snap) => {
+        const mData = await Promise.all(snap.docs.map(async (mDoc) => {
+          const uSnap = await getDoc(doc(db, 'users', mDoc.id));
+          return { id: mDoc.id, ...mDoc.data(), ...(uSnap.data() || {}) };
+        }));
+        setMembers(mData);
+      });
+      return () => unsub();
+    }
+  }, [server, isOpen]);
 
   useEffect(() => {
     if (server) {
@@ -63,26 +125,64 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
           />
           <motion.div 
             initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-lg bg-surface-container-high border border-white/10 rounded-3xl p-8 shadow-2xl"
+            className="relative w-full max-w-2xl glass-floating rounded-3xl overflow-hidden shadow-2xl flex h-[500px]"
           >
-            <h2 className="text-2xl font-display font-bold text-white mb-6">Server Settings</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Server Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Description</label>
-                <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
-              </div>
-              <div>
-                <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Status</label>
-                <input value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
-              </div>
+            <div className="w-48 bg-white/5 p-6 border-r border-white/10 flex flex-col gap-2">
+              <h3 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-4">Management</h3>
+              <button onClick={() => setTab('general')} className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'general' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-white/5'}`}>Overview</button>
+              <button onClick={() => setTab('members')} className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'members' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-white/5'}`}>Members</button>
             </div>
-            <div className="flex gap-4 mt-8">
-              <button onClick={handleSave} className="flex-1 bg-primary text-[#310048] font-display font-bold py-3 rounded-xl hover:bg-primary/80 transition-all">Save Changes</button>
-              <button onClick={onClose} className="flex-1 bg-white/5 text-white font-display font-bold py-3 rounded-xl hover:bg-white/10 transition-all">Cancel</button>
+            <div className="flex-1 p-8 flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-display font-bold text-white">{tab === 'general' ? 'Server Overview' : 'Member Management'}</h2>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {tab === 'general' ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Server Name</label>
+                      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Description</label>
+                      <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {members.map(m => (
+                      <div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-8 w-8 rounded-lg" />
+                          <div>
+                            <p className="text-sm font-bold text-white">{m.displayName}</p>
+                            <p className="text-[10px] text-on-surface-variant font-bold uppercase">{server.ownerId === m.id ? 'Owner' : (server.adminIds?.includes(m.id) ? 'Admin' : 'Member')}</p>
+                          </div>
+                        </div>
+                        {server.ownerId === user?.uid && m.id !== user?.uid && (
+                          <button 
+                            onClick={async () => {
+                              const newAdmins = server.adminIds?.includes(m.id) 
+                                ? server.adminIds.filter((id: string) => id !== m.id)
+                                : [...(server.adminIds || []), m.id];
+                              await setDoc(doc(db, 'servers', server.id), { adminIds: newAdmins }, { merge: true });
+                            }}
+                            className={`p-2 rounded-lg transition-all ${server.adminIds?.includes(m.id) ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:bg-white/10'}`}
+                          >
+                            <Shield size="16" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 mt-8">
+                <button onClick={handleSave} className="flex-1 btn-primary py-3 rounded-xl">Save Changes</button>
+                <button onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl">Cancel</button>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -224,18 +324,26 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
   const [users, setUsers] = useState<any[]>([]);
   const [currentServer, setCurrentServer] = useState<any>(null);
   const [showServerSettings, setShowServerSettings] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<any>(null);
 
   useEffect(() => {
     const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(50)), (s) => {
       setUsers(s.docs.map(d => ({id: d.id, ...d.data()})));
     });
+
+    let unsubServer: any;
+    if (currentServerId) {
+      unsubServer = onSnapshot(doc(db, 'servers', currentServerId), (doc) => {
+        if (doc.exists()) setCurrentServer({ id: doc.id, ...doc.data() });
+      });
+    }
     if (!currentServerId) {
       if (!user) return unsubUsers;
       const q = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setConversations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
-      return () => { unsubUsers(); unsubscribe(); };
+      return () => { unsubUsers(); unsubscribe(); if (unsubServer) unsubServer(); };
     }
     const q = query(collection(db, `servers/${currentServerId}/channels`));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -316,6 +424,13 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
               <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold truncate max-w-[120px]">{currentServer?.status || 'Online'}</p>
             </div>
           </div>
+          {isAdmin && (
+            <button onClick={() => setShowServerSettings(true)} className="text-on-surface-variant hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
+              <ChevronDown size="18" />
+            </button>
+          )}
+            </div>
+          </div>
 
         </div>
         
@@ -381,6 +496,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
         )}
       </div>
       <ServerSettingsModal isOpen={showServerSettings} onClose={() => setShowServerSettings(false)} server={currentServer} />
+      <ChannelSettingsModal isOpen={!!editingChannel} onClose={() => setEditingChannel(null)} channel={editingChannel} serverId={currentServerId} />
     </div>
   );
 };
