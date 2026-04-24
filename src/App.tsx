@@ -269,7 +269,7 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
   );
 };
 
-const TopNavBar = ({ onOpenProfile }: { onOpenProfile: () => void }) => {
+const TopNavBar = ({ onOpenProfile, activeView, onViewChange }: { onOpenProfile: () => void, activeView: string, onViewChange: (v: string) => void }) => {
 
   const { user, profileData } = useApp();
   return (
@@ -279,10 +279,19 @@ const TopNavBar = ({ onOpenProfile }: { onOpenProfile: () => void }) => {
           Lontera
         </div>
         <nav className="hidden md:flex items-center gap-6">
-          {['Explore', 'Friends', 'Library'].map((item) => (
-            <a key={item} href="#" className="text-on-surface-variant hover:text-white hover:bg-white/5 transition-all px-3 py-1 rounded-md text-sm font-medium">
-              {item}
-            </a>
+          {[
+            { id: 'explore', label: 'Explore', icon: Compass },
+            { id: 'friends', label: 'Friends', icon: Users },
+            { id: 'library', label: 'Library', icon: Library }
+          ].map((item) => (
+            <button 
+              key={item.id} 
+              onClick={() => onViewChange(item.id)}
+              className={`flex items-center gap-2 transition-all px-3 py-1.5 rounded-lg text-sm font-bold uppercase tracking-widest ${activeView === item.id ? 'bg-primary text-[#310048] shadow-lg shadow-primary/20' : 'text-on-surface-variant hover:text-white hover:bg-white/5'}`}
+            >
+              <item.icon size="16" />
+              {item.label}
+            </button>
           ))}
         </nav>
       </div>
@@ -1254,6 +1263,212 @@ const SettingsModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
   );
 };
 
+const FriendsView = () => {
+  const { user, setCurrentServerId, setCurrentChannelId, setCurrentConversationId } = useApp();
+  const [activeTab, setActiveTab] = useState<'online' | 'all' | 'pending' | 'add'>('online');
+  const [friends, setFriends] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    
+    // Listen for friends
+    const unsubFriends = onSnapshot(collection(db, `users/${user.uid}/friends`), (snap) => {
+      const friendIds = snap.docs.map(d => d.id);
+      if (friendIds.length > 0) {
+        const q = query(collection(db, 'users'), where('uid', 'in', friendIds));
+        onSnapshot(q, (s) => setFriends(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+      } else {
+        setFriends([]);
+      }
+    });
+
+    // Listen for incoming requests
+    const unsubReq = onSnapshot(collection(db, `users/${user.uid}/friendRequests`), (snap) => {
+      setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // Listen for all users (for discovery)
+    const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(50)), (snap) => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.id !== user.uid));
+    });
+
+    return () => { unsubFriends(); unsubReq(); unsubUsers(); };
+  }, [user]);
+
+  const sendRequest = async (toId: string) => {
+    if (!user) return;
+    await setDoc(doc(db, `users/${toId}/friendRequests`, user.uid), {
+      fromId: user.uid,
+      status: 'pending',
+      timestamp: serverTimestamp(),
+      displayName: user.displayName || 'Unknown',
+      photoURL: user.photoURL || ''
+    });
+  };
+
+  const acceptRequest = async (fromId: string) => {
+    if (!user) return;
+    // Add to my friends
+    await setDoc(doc(db, `users/${user.uid}/friends`, fromId), { uid: fromId, since: serverTimestamp() });
+    // Add me to their friends
+    await setDoc(doc(db, `users/${fromId}/friends`, user.uid), { uid: user.uid, since: serverTimestamp() });
+    // Delete request
+    await deleteDoc(doc(db, `users/${user.uid}/friendRequests`, fromId));
+  };
+
+  const declineRequest = async (fromId: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, `users/${user.uid}/friendRequests`, fromId));
+  };
+
+  const startChat = (friendId: string) => {
+    if (!user) return;
+    const sortedIds = [user.uid, friendId].sort();
+    const convId = sortedIds.join('_');
+    setCurrentServerId(null);
+    setCurrentChannelId(null);
+    setCurrentConversationId(convId);
+  };
+
+  const filteredUsers = users.filter(u => u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) && !friends.some(f => f.id === u.id));
+  const onlineFriends = friends.filter(f => f.status === 'online');
+  const pendingIncoming = requests.filter(r => r.status === 'pending');
+
+  return (
+    <div className="flex-1 flex flex-col bg-surface-container-low h-full overflow-hidden">
+      <div className="h-16 border-b border-white/5 flex items-center px-6 gap-6 bg-surface-container/30 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3 pr-6 border-r border-white/10">
+          <Users size="20" className="text-on-surface-variant" />
+          <h2 className="text-white font-display font-bold tracking-tight">Friends</h2>
+        </div>
+        
+        <nav className="flex items-center gap-1">
+          {[
+            { id: 'online', label: `Online${onlineFriends.length > 0 ? ` (${onlineFriends.length})` : ''}` },
+            { id: 'all', label: 'All' },
+            { id: 'pending', label: `Pending${pendingIncoming.length > 0 ? ` (${pendingIncoming.length})` : ''}` },
+            { id: 'add', label: 'Add Friend', highlight: true }
+          ].map((tab) => (
+            <button 
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
+                activeTab === tab.id 
+                  ? (tab.highlight ? 'bg-green-500 text-black' : 'bg-white/10 text-white') 
+                  : (tab.highlight ? 'text-green-500 hover:bg-green-500/10' : 'text-on-surface-variant hover:text-white hover:bg-white/5')
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        {activeTab === 'add' ? (
+          <div className="max-w-2xl">
+            <h3 className="text-white font-display font-bold text-lg mb-2">Add Friend</h3>
+            <p className="text-on-surface-variant text-sm mb-6">You can add friends with their Lontera username or email.</p>
+            <div className="relative mb-8">
+              <input 
+                placeholder="Search Lontera users..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-surface-container-highest border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-primary transition-all pr-12 shadow-xl"
+              />
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant" size="20" />
+            </div>
+
+            <div className="space-y-3">
+              {filteredUsers.map(u => (
+                <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
+                  <div className="flex items-center gap-4">
+                    <img src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${u.displayName}`} className="h-12 w-12 rounded-2xl object-cover" alt="" />
+                    <div>
+                      <h4 className="text-white font-bold text-sm leading-tight">{u.displayName}</h4>
+                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-0.5">{u.status || 'Offline'}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => sendRequest(u.id)}
+                    className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-primary hover:text-black transition-all"
+                  >
+                    Send Friend Request
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : activeTab === 'pending' ? (
+          <div className="space-y-8">
+            <div>
+              <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4 pl-2">Friend Requests — {pendingIncoming.length}</h4>
+              <div className="space-y-2">
+                {pendingIncoming.map(r => (
+                  <div key={r.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group transition-all">
+                    <div className="flex items-center gap-4">
+                      <img src={r.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${r.displayName}`} className="h-12 w-12 rounded-2xl object-cover" alt="" />
+                      <div>
+                        <h4 className="text-white font-bold text-sm leading-tight">{r.displayName}</h4>
+                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-0.5">Incoming Request</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => acceptRequest(r.id)} className="p-2.5 bg-green-500/10 text-green-500 rounded-xl hover:bg-green-500 hover:text-black transition-all"><Check size="20" /></button>
+                      <button onClick={() => declineRequest(r.id)} className="p-2.5 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-black transition-all"><X size="20" /></button>
+                    </div>
+                  </div>
+                ))}
+                {pendingIncoming.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant opacity-50">
+                    <Mail size="48" className="mb-4" />
+                    <p className="text-sm font-bold uppercase tracking-widest">No pending requests</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(activeTab === 'online' ? onlineFriends : friends).map(f => (
+              <div 
+                key={f.id} 
+                className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all cursor-pointer"
+                onClick={() => startChat(f.id)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <img src={f.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${f.displayName}`} className="h-12 w-12 rounded-2xl object-cover" alt="" />
+                    <div className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-[3px] border-[#1e1f22] ${f.status === 'online' ? 'bg-green-500' : f.status === 'idle' ? 'bg-yellow-500' : f.status === 'dnd' ? 'bg-red-500' : 'bg-gray-500'}`} />
+                  </div>
+                  <div>
+                    <h4 className="text-white font-bold text-sm leading-tight">{f.displayName}</h4>
+                    <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-0.5">{f.customStatus || f.status || 'Offline'}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                   <button onClick={(e) => { e.stopPropagation(); startChat(f.id); }} className="p-2.5 bg-white/5 text-on-surface-variant rounded-xl hover:text-white transition-all"><MessageSquare size="20" /></button>
+                   <button className="p-2.5 bg-white/5 text-on-surface-variant rounded-xl hover:text-red-400 transition-all"><MoreVertical size="20" /></button>
+                </div>
+              </div>
+            ))}
+            {friends.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-40 text-on-surface-variant opacity-50">
+                <Users size="64" className="mb-4" />
+                <p className="text-lg font-bold uppercase tracking-[0.2em] mb-2">No friends yet</p>
+                <button onClick={() => setActiveTab('add')} className="text-primary hover:underline text-sm font-bold">Try adding someone!</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const UserDirectoryModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
   const { user, setCurrentServerId, setCurrentChannelId, setCurrentConversationId } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
@@ -1638,11 +1853,19 @@ const AuthScreen = () => {
 };
 
 const LonteraApp = () => {
-  const { user, loading, needsSetup, currentServer, currentServerId } = useApp();
+  const { user, loading, needsSetup, currentServer, currentServerId, currentChannelId, currentConversationId } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isServerSettingsOpen, setIsServerSettingsOpen] = useState(false);
   const [isUserDirectoryOpen, setIsUserDirectoryOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<any>(null);
+  const [activeView, setActiveView] = useState('explore');
+
+  // Auto-switch to chat view when a channel or conversation is selected
+  useEffect(() => {
+    if (currentChannelId || currentConversationId) {
+      setActiveView('chat');
+    }
+  }, [currentChannelId, currentConversationId]);
 
   if (loading) {
     return (
@@ -1661,7 +1884,15 @@ const LonteraApp = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background font-sans">
-      <TopNavBar onOpenProfile={() => setIsSettingsOpen(true)} />
+      <TopNavBar 
+        onOpenProfile={() => setIsSettingsOpen(true)} 
+        activeView={activeView}
+        onViewChange={(v) => {
+          setActiveView(v);
+          // Optional: clear selections if switching to explore/friends? 
+          // Usually better to keep them in background.
+        }}
+      />
       <div className="flex-1 flex mt-16 h-[calc(100vh-64px)] overflow-hidden relative">
         <SidebarServers />
         <div className="flex-1 flex ml-18 bg-surface-container-low">
@@ -1671,7 +1902,15 @@ const LonteraApp = () => {
             onOpenChannelSettings={(c) => setEditingChannel(c)}
             onOpenUserDirectory={() => setIsUserDirectoryOpen(true)}
           />
-          <ChatArea />
+          {activeView === 'friends' ? (
+            <FriendsView />
+          ) : activeView === 'explore' ? (
+            <div className="flex-1 flex items-center justify-center text-on-surface-variant font-display font-bold uppercase tracking-[0.2em] animate-pulse">
+              Explore coming soon...
+            </div>
+          ) : (
+            <ChatArea />
+          )}
           <UserList />
         </div>
       </div>
