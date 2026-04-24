@@ -429,11 +429,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
               <ChevronDown size="18" />
             </button>
           )}
-            </div>
-          </div>
-
         </div>
-        
       </div>
       
       <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
