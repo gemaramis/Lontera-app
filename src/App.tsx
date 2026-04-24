@@ -133,31 +133,35 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
               <button onClick={() => setTab('members')} className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'members' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-white/5'}`}>Members</button>
             </div>
             <div className="flex-1 p-8 flex flex-col">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-display font-bold text-white">{tab === 'general' ? 'Server Overview' : 'Member Management'}</h2>
+              <button onClick={() => setTab('general')} className={`text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'general' ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(255,183,125,0.1)]' : 'text-on-surface-variant hover:bg-white/5'}`}>Server Overview</button>
+              <button onClick={() => setTab('members')} className={`text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'members' ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(255,183,125,0.1)]' : 'text-on-surface-variant hover:bg-white/5'}`}>Member Management</button>
+            </div>
+            <div className="flex-1 p-10 flex flex-col min-w-0">
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-display font-bold text-white tracking-tight">{tab === 'general' ? 'Server Overview' : 'Members'}</h2>
               </div>
               
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
                 {tab === 'general' ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Server Name</label>
-                      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
+                  <div className="space-y-6">
+                    <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-3">Server Name</label>
+                      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border border-white/10 p-4 rounded-xl text-white outline-none focus:border-primary transition-all text-lg font-bold" />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Description</label>
-                      <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
+                    <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-3">Description</label>
+                      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full bg-surface-container-highest border border-white/10 p-4 rounded-xl text-white outline-none focus:border-primary transition-all resize-none" />
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {members.map(m => (
-                      <div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
-                        <div className="flex items-center gap-3">
-                          <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-8 w-8 rounded-lg" />
+                      <div key={m.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-4">
+                          <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-10 w-10 rounded-xl border border-white/10 shadow-lg" />
                           <div>
-                            <p className="text-sm font-bold text-white">{m.displayName}</p>
-                            <p className="text-[10px] text-on-surface-variant font-bold uppercase">{server.ownerId === m.id ? 'Owner' : (server.adminIds?.includes(m.id) ? 'Admin' : 'Member')}</p>
+                            <p className="font-bold text-white leading-none mb-1">{m.displayName}</p>
+                            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest leading-none">{server.ownerId === m.id ? 'Owner' : (server.adminIds?.includes(m.id) ? 'Admin' : 'Member')}</p>
                           </div>
                         </div>
                         {server.ownerId === user?.uid && m.id !== user?.uid && (
@@ -168,9 +172,9 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
                                 : [...(server.adminIds || []), m.id];
                               await setDoc(doc(db, 'servers', server.id), { adminIds: newAdmins }, { merge: true });
                             }}
-                            className={`p-2 rounded-lg transition-all ${server.adminIds?.includes(m.id) ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:bg-white/10'}`}
+                            className={`p-2.5 rounded-xl transition-all ${server.adminIds?.includes(m.id) ? 'text-primary bg-primary/10 shadow-[0_0_15px_rgba(255,183,125,0.1)]' : 'text-on-surface-variant hover:bg-white/20'}`}
                           >
-                            <Shield size="16" />
+                            <Shield size="18" />
                           </button>
                         )}
                       </div>
@@ -179,9 +183,9 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
                 )}
               </div>
 
-              <div className="flex gap-4 mt-8">
-                <button onClick={handleSave} className="flex-1 btn-primary py-3 rounded-xl">Save Changes</button>
-                <button onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl">Cancel</button>
+              <div className="flex gap-4 mt-10">
+                <button onClick={handleSave} className="flex-1 btn-primary py-4 rounded-2xl text-lg">Save Changes</button>
+                <button onClick={onClose} className="flex-1 bg-white/5 text-white py-4 rounded-2xl text-lg hover:bg-white/10 transition-all font-bold">Cancel</button>
               </div>
             </div>
           </motion.div>
@@ -317,33 +321,24 @@ const SidebarServers = () => {
   );
 };
 
-const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => {
-  const { currentServerId, currentChannelId, setCurrentChannelId, currentConversationId, setCurrentConversationId, user } = useApp();
+const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSettings }: { onOpenSettings: () => void, onOpenServerSettings: () => void, onOpenChannelSettings: (c: any) => void }) => {
+  const { currentServerId, currentServer, currentChannelId, setCurrentChannelId, currentConversationId, setCurrentConversationId, user } = useApp();
   const [channels, setChannels] = useState<any[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [currentServer, setCurrentServer] = useState<any>(null);
-  const [showServerSettings, setShowServerSettings] = useState(false);
-  const [editingChannel, setEditingChannel] = useState<any>(null);
 
   useEffect(() => {
     const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(50)), (s) => {
       setUsers(s.docs.map(d => ({id: d.id, ...d.data()})));
     });
 
-    let unsubServer: any;
-    if (currentServerId) {
-      unsubServer = onSnapshot(doc(db, 'servers', currentServerId), (doc) => {
-        if (doc.exists()) setCurrentServer({ id: doc.id, ...doc.data() });
-      });
-    }
     if (!currentServerId) {
       if (!user) return unsubUsers;
       const q = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setConversations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
-      return () => { unsubUsers(); unsubscribe(); if (unsubServer) unsubServer(); };
+      return () => { unsubUsers(); unsubscribe(); };
     }
     const q = query(collection(db, `servers/${currentServerId}/channels`));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -425,7 +420,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
             </div>
           </div>
           {isAdmin && (
-            <button onClick={() => setShowServerSettings(true)} className="text-on-surface-variant hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
+            <button onClick={onOpenServerSettings} className="text-on-surface-variant hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
               <ChevronDown size="18" />
             </button>
           )}
@@ -449,7 +444,10 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
                 onClick={() => setCurrentChannelId(channel.id)}
               >
                 <Hash size="16" className={currentChannelId === channel.id ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'} />
-                <span className="text-sm font-medium">{channel.name}</span>
+                <span className="text-sm font-medium flex-1">{channel.name}</span>
+                {isAdmin && (
+                  <Settings size="14" className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); onOpenChannelSettings(channel); }} />
+                )}
               </div>
             ))}
           </div>
@@ -470,10 +468,13 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
                 className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentChannelId === channel.id ? 'bg-primary/20 text-primary ring-1 ring-primary/30' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
                 onClick={() => setCurrentChannelId(channel.id)}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1">
                   <Volume2 size="16" className={currentChannelId === channel.id ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'} />
                   <span className="text-sm font-medium">{channel.name}</span>
                 </div>
+                {isAdmin && (
+                  <Settings size="14" className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); onOpenChannelSettings(channel); }} />
+                )}
               </div>
             ))}
           </div>
@@ -486,13 +487,11 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
           <button className="p-2 rounded-lg text-on-surface-variant hover:text-red-400 hover:bg-white/5 transition-all"><Headphones size="18" /></button>
         </div>
         {isAdmin && (
-          <button onClick={() => setShowServerSettings(true)} className="p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-all">
+          <button onClick={onOpenServerSettings} className="p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-all">
             <Settings size="18" />
           </button>
         )}
       </div>
-      <ServerSettingsModal isOpen={showServerSettings} onClose={() => setShowServerSettings(false)} server={currentServer} />
-      <ChannelSettingsModal isOpen={!!editingChannel} onClose={() => setEditingChannel(null)} channel={editingChannel} serverId={currentServerId} />
     </div>
   );
 };
@@ -1477,8 +1476,10 @@ const AuthScreen = () => {
 };
 
 const LonteraApp = () => {
-  const { user, loading, needsSetup } = useApp();
+  const { user, loading, needsSetup, currentServer, currentServerId } = useApp();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isServerSettingsOpen, setIsServerSettingsOpen] = useState(false);
+  const [editingChannel, setEditingChannel] = useState<any>(null);
 
   if (loading) {
     return (
@@ -1501,12 +1502,18 @@ const LonteraApp = () => {
       <div className="flex-1 flex mt-16 h-[calc(100vh-64px)] overflow-hidden relative">
         <SidebarServers />
         <div className="flex-1 flex ml-18 bg-surface-container-low">
-          <SidebarChannels onOpenSettings={() => {}} />
+          <SidebarChannels 
+            onOpenSettings={() => setIsSettingsOpen(true)} 
+            onOpenServerSettings={() => setIsServerSettingsOpen(true)}
+            onOpenChannelSettings={(c) => setEditingChannel(c)}
+          />
           <ChatArea />
           <UserList />
         </div>
       </div>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <ServerSettingsModal isOpen={isServerSettingsOpen} onClose={() => setIsServerSettingsOpen(false)} server={currentServer} />
+      <ChannelSettingsModal isOpen={!!editingChannel} onClose={() => setEditingChannel(null)} channel={editingChannel} serverId={currentServerId || ''} />
     </div>
   );
 };

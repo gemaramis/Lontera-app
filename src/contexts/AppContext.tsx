@@ -15,6 +15,7 @@ interface AppContextType {
   loading: boolean;
   needsSetup: boolean;
   currentServerId: string | null;
+  currentServer: any | null;
   currentChannelId: string | null;
   currentConversationId: string | null;
   setCurrentServerId: (id: string | null) => void;
@@ -34,6 +35,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [currentServerId, setCurrentServerId] = useState<string | null>(null);
+  const [currentServer, setCurrentServer] = useState<any | null>(null);
   const [currentChannelId, setCurrentChannelId] = useState<string | null>(null);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
 
@@ -46,14 +48,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const snap = await getDoc(userRef);
 
         if (!snap.exists() || !snap.data()?.displayName) {
-          // Profile not set up yet — show setup screen
           setUser(authUser);
           setNeedsSetup(true);
           setLoading(false);
           return;
         }
 
-        // Real-time listener for profile changes
         unsubProfile = onSnapshot(userRef, (doc) => {
           setProfileData(doc.data());
         });
@@ -75,17 +75,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  // Sync currentServer metadata
+  useEffect(() => {
+    if (currentServerId) {
+      const unsub = onSnapshot(doc(db, 'servers', currentServerId), (doc) => {
+        if (doc.exists()) setCurrentServer({ id: doc.id, ...doc.data() });
+      });
+      return unsub;
+    } else {
+      setCurrentServer(null);
+    }
+  }, [currentServerId]);
+
   const updateProfile = async (data: any) => {
     if (!user) return;
     const userRef = doc(db, 'users', user.uid);
     await setDoc(userRef, { ...data, lastSeen: new Date().toISOString() }, { merge: true });
   };
 
-  /** Create a new account with email + password, then save the Firestore profile. */
   const register = async (displayName: string, email: string, password: string, photoURL: string) => {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
     const authUser = credential.user;
-
     const userRef = doc(db, 'users', authUser.uid);
     await setDoc(userRef, {
       uid: authUser.uid,
@@ -95,24 +105,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'online',
       lastSeen: new Date().toISOString(),
     });
-
     setProfileData({ uid: authUser.uid, displayName, photoURL, email, status: 'online' });
     setNeedsSetup(false);
     setUser(authUser);
   };
 
-  /** Sign in to an existing account with email + password. */
   const login = async (email: string, password: string) => {
     const credential = await signInWithEmailAndPassword(auth, email, password);
     const authUser = credential.user;
-
-    // Refresh profile from Firestore
     const userRef = doc(db, 'users', authUser.uid);
     const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      setProfileData(snap.data());
-    }
-
+    if (snap.exists()) setProfileData(snap.data());
     setNeedsSetup(false);
     setUser(authUser);
   };
@@ -132,6 +135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loading,
       needsSetup,
       currentServerId,
+      currentServer,
       currentChannelId,
       currentConversationId,
       setCurrentServerId,
@@ -149,8 +153,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (context === undefined) throw new Error('useApp must be used within an AppProvider');
   return context;
 };
