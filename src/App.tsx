@@ -31,7 +31,67 @@ import remarkGfm from 'remark-gfm';
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, setDoc, deleteDoc, getDocs, limit } from 'firebase/firestore';
 import { db } from './lib/firebase';
 
+
+const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onClose: () => void, server: any }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    if (server) {
+      setName(server.name || '');
+      setDescription(server.description || '');
+      setStatus(server.status || '');
+    }
+  }, [server, isOpen]);
+
+  const handleSave = async () => {
+    if (!server) return;
+    const serverRef = doc(db, 'servers', server.id);
+    await setDoc(serverRef, { name, description, status }, { merge: true });
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose} className="absolute inset-0 bg-black/80 backdrop-blur-md"
+          />
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            className="relative w-full max-w-lg bg-[#1a1a1c] border border-white/10 rounded-3xl p-8 shadow-2xl"
+          >
+            <h2 className="text-2xl font-display font-bold text-white mb-6">Server Settings</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Server Name</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Description</label>
+                <input value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-display font-bold text-lontera-muted uppercase tracking-widest mb-2">Status</label>
+                <input value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-[#2a2a2c] border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-lontera-primary transition-all" />
+              </div>
+            </div>
+            <div className="flex gap-4 mt-8">
+              <button onClick={handleSave} className="flex-1 bg-lontera-primary text-[#310048] font-display font-bold py-3 rounded-xl hover:bg-lontera-primary/80 transition-all">Save Changes</button>
+              <button onClick={onClose} className="flex-1 bg-white/5 text-white font-display font-bold py-3 rounded-xl hover:bg-white/10 transition-all">Cancel</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 const TopNavBar = () => {
+
   const { user, profileData } = useApp();
   return (
     <header className="h-16 fixed top-0 w-full z-50 bg-[#121214]/70 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 shadow-[0_0_20px_rgba(233,179,255,0.05)]">
@@ -88,6 +148,9 @@ const SidebarServers = () => {
         const serverRef = await addDoc(collection(db, 'servers'), {
           name,
           ownerId: user.uid,
+          adminIds: [user.uid],
+          description: '',
+          status: 'Online',
           createdAt: serverTimestamp()
         });
         
@@ -158,6 +221,8 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
   const [channels, setChannels] = useState<any[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [currentServer, setCurrentServer] = useState<any>(null);
+  const [showServerSettings, setShowServerSettings] = useState(false);
 
   useEffect(() => {
     const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(50)), (s) => {
@@ -235,17 +300,26 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
     );
   }
 
+  const isAdmin = currentServer?.adminIds?.includes(user?.uid) || currentServer?.ownerId === user?.uid;
+
   return (
     <div className="w-64 bg-[#1e1f22]/40 backdrop-blur-2xl border-r border-white/5 h-full flex flex-col">
       <div className="p-4 pt-6 pb-4 border-b border-white/5 bg-black/5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="h-10 w-10 bg-lontera-primary/10 rounded-xl border border-lontera-primary/20 flex items-center justify-center font-display font-bold text-lontera-primary">
-            S
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-lontera-primary/10 rounded-xl border border-lontera-primary/20 flex items-center justify-center font-display font-bold text-lontera-primary">
+              {currentServer?.name?.charAt(0)?.toUpperCase() || 'S'}
+            </div>
+            <div>
+              <h2 className="font-display font-bold text-white text-sm leading-tight truncate max-w-[120px]">{currentServer?.name || 'Server Name'}</h2>
+              <p className="text-[10px] text-lontera-muted uppercase tracking-widest font-bold truncate max-w-[120px]">{currentServer?.status || 'Online'}</p>
+            </div>
           </div>
-          <div>
-            <h2 className="font-display font-bold text-white text-sm leading-tight">Server Name</h2>
-            <p className="text-[10px] text-lontera-muted uppercase tracking-widest font-bold">Gaming Hub</p>
-          </div>
+          {isAdmin && (
+            <button onClick={() => setShowServerSettings(true)} className="text-lontera-muted hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
+              <Settings size="16" />
+            </button>
+          )}
         </div>
         <button className="w-full bg-lontera-primary hover:bg-lontera-primary/80 text-[#310048] font-display font-bold py-2 rounded-lg text-sm transition-all shadow-[0_0_15px_rgba(233,179,255,0.1)]">
           Join Voice
@@ -259,7 +333,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
               <ChevronDown size="14" />
               <span className="text-[10px] font-display font-bold uppercase tracking-wider">Text Channels</span>
             </div>
-            <Plus size="14" onClick={(e) => { e.stopPropagation(); createChannel('text'); }} />
+            {isAdmin && <Plus size="14" onClick={(e) => { e.stopPropagation(); createChannel('text'); }} className="cursor-pointer hover:text-white transition-colors" />}
           </div>
           <div className="space-y-0.5">
             {channels.filter(c => c.type === 'text').map(channel => (
@@ -281,7 +355,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
               <ChevronDown size="14" />
               <span className="text-[10px] font-display font-bold uppercase tracking-wider">Voice Channels</span>
             </div>
-            <Plus size="14" onClick={(e) => { e.stopPropagation(); createChannel('voice'); }} />
+            {isAdmin && <Plus size="14" onClick={(e) => { e.stopPropagation(); createChannel('voice'); }} className="cursor-pointer hover:text-white transition-colors" />}
           </div>
           <div className="space-y-0.5">
             {channels.filter(c => c.type === 'voice').map(channel => (
@@ -307,6 +381,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
         </div>
         <button onClick={onOpenSettings} className="p-2 rounded-lg text-lontera-muted hover:text-white hover:bg-white/5 transition-all"><Settings size="18" /></button>
       </div>
+      <ServerSettingsModal isOpen={showServerSettings} onClose={() => setShowServerSettings(false)} server={currentServer} />
     </div>
   );
 };

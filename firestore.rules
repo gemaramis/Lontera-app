@@ -14,15 +14,19 @@ service cloud.firestore {
     function existing() { return resource.data; }
     function isVerified() { return request.auth.token.email_verified == true; }
     
-    function isServerMember(serverId) {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) ||
-        isServerOwner(serverId)
-      );
+    function isServerAdmin(serverId) {
+      return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/servers/$(serverId)).data.adminIds;
     }
 
     function isServerOwner(serverId) {
       return isSignedIn() && get(/databases/$(database)/documents/servers/$(serverId)).data.ownerId == request.auth.uid;
+    }
+
+    function isServerMember(serverId) {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/servers/$(serverId)/members/$(request.auth.uid)) ||
+        isServerOwner(serverId) || isServerAdmin(serverId)
+      );
     }
 
     // Validation Blueprints
@@ -33,7 +37,7 @@ service cloud.firestore {
 
     function isValidServer(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.ownerId == request.auth.uid;
+             data.ownerId == request.auth.uid && data.adminIds is list;
     }
 
     function isValidChannel(data) {
@@ -71,8 +75,8 @@ service cloud.firestore {
       allow get: if isSignedIn(); // Allow reading metadata for any server to join
       allow list: if isSignedIn(); // Allow discovery
       allow create: if isSignedIn() && isValidServer(incoming());
-      allow update: if isServerOwner(serverId) && isValidServer(incoming()) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'iconURL']);
+      allow update: if (isServerOwner(serverId) || isServerAdmin(serverId)) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'iconURL', 'description', 'status', 'adminIds']);
       allow delete: if isServerOwner(serverId);
 
       // Recursive memberships
@@ -85,7 +89,7 @@ service cloud.firestore {
       // Channels
       match /channels/{channelId} {
         allow read, list: if isServerMember(serverId) || isServerOwner(serverId);
-        allow create, update, delete: if isServerOwner(serverId) && isValidChannel(incoming());
+        allow create, update, delete: if (isServerOwner(serverId) || isServerAdmin(serverId)) && isValidChannel(incoming());
 
         // Participants in Voice Channel
         match /participants/{participantId} {
@@ -100,7 +104,7 @@ service cloud.firestore {
           allow create: if isServerMember(serverId) && isValidMessage(incoming()) && incoming().createdAt == request.time;
           allow update: if isServerMember(serverId) && existing().authorId == request.auth.uid && 
                         incoming().diff(existing()).affectedKeys().hasOnly(['content']) && isValidMessage(incoming());
-          allow delete: if isServerMember(serverId) && (existing().authorId == request.auth.uid || isServerOwner(serverId));
+          allow delete: if isServerMember(serverId) && (existing().authorId == request.auth.uid || isServerOwner(serverId) || isServerAdmin(serverId));
         }
       }
     }
