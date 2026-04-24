@@ -29,6 +29,10 @@ service cloud.firestore {
       );
     }
 
+    function areFriends(u1, u2) {
+      return exists(/databases/$(database)/documents/users/$(u1)/friends/$(u2));
+    }
+
     // Validation Blueprints
     function isValidUser(data) {
       return data.uid == request.auth.uid &&
@@ -71,7 +75,7 @@ service cloud.firestore {
 
       match /friends/{friendId} {
         allow read, list: if isOwner(userId);
-        allow write: if isOwner(userId);
+        allow write: if isOwner(userId) || (isSignedIn() && request.auth.uid == friendId && exists(/databases/$(database)/documents/users/$(request.auth.uid)/friendRequests/$(userId)));
       }
 
       match /friendRequests/{requestId} {
@@ -142,7 +146,7 @@ service cloud.firestore {
     // Conversations
     match /conversations/{conversationId} {
       allow read, list: if isSignedIn() && request.auth.uid in existing().participants;
-      allow create: if isSignedIn() && request.auth.uid in incoming().participants;
+      allow create: if isSignedIn() && request.auth.uid in incoming().participants && areFriends(incoming().participants[0], incoming().participants[1]);
       allow update: if isSignedIn() && request.auth.uid in existing().participants;
 
       match /messages/{messageId} {

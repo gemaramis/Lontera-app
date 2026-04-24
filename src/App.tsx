@@ -1514,10 +1514,19 @@ const FriendsView = () => {
   );
 };
 
-const UserDirectoryModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const UserDirectoryModal = ({ isOpen, onClose, setActiveView }: { isOpen: boolean, onClose: () => void, setActiveView: (v: string) => void }) => {
   const { user, setCurrentServerId, setCurrentChannelId, setCurrentConversationId } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [users, setUsers] = useState<any[]>([]);
+  const [friendIds, setFriendIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user || !isOpen) return;
+    const unsubFriends = onSnapshot(collection(db, `users/${user.uid}/friends`), (snap) => {
+      setFriendIds(snap.docs.map(d => d.id));
+    });
+    return unsubFriends;
+  }, [user, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -1568,8 +1577,8 @@ const UserDirectoryModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
               {filtered.map(u => (
                 <div 
                   key={u.id}
-                  onClick={() => startConversation(u.id)}
-                  className="flex items-center justify-between p-3 rounded-2xl hover:bg-white/5 border border-transparent hover:border-white/5 transition-all cursor-pointer group"
+                  onClick={() => friendIds.includes(u.id) && startConversation(u.id)}
+                  className={`flex items-center justify-between p-3 rounded-2xl border border-transparent transition-all ${friendIds.includes(u.id) ? 'hover:bg-white/5 hover:border-white/5 cursor-pointer group' : 'opacity-70 cursor-default'}`}
                 >
                   <div className="flex items-center gap-4">
                     <div className="relative">
@@ -1578,10 +1587,19 @@ const UserDirectoryModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                     </div>
                     <div>
                       <h4 className="text-white font-bold text-sm leading-tight group-hover:text-primary transition-colors">{u.displayName}</h4>
-                      <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold mt-0.5">{u.status || 'Offline'}</p>
+                      <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold mt-0.5">{friendIds.includes(u.id) ? (u.status || 'Offline') : 'Not Friends'}</p>
                     </div>
                   </div>
-                  <button className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all">Message</button>
+                  {friendIds.includes(u.id) ? (
+                    <button className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl opacity-0 group-hover:opacity-100 transition-all">Message</button>
+                  ) : (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onClose(); setActiveView('friends'); }}
+                      className="bg-white/5 text-on-surface-variant text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-white/10 transition-all"
+                    >
+                      Add Friend
+                    </button>
+                  )}
                 </div>
               ))}
               {filtered.length === 0 && (
@@ -1960,7 +1978,7 @@ const LonteraApp = () => {
         </div>
       </div>
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-      <UserDirectoryModal isOpen={isUserDirectoryOpen} onClose={() => setIsUserDirectoryOpen(false)} />
+      <UserDirectoryModal isOpen={isUserDirectoryOpen} onClose={() => setIsUserDirectoryOpen(false)} setActiveView={setActiveView} />
       <ServerSettingsModal isOpen={isServerSettingsOpen} onClose={() => setIsServerSettingsOpen(false)} server={currentServer} />
       <ChannelSettingsModal isOpen={!!editingChannel} onClose={() => setEditingChannel(null)} channel={editingChannel} serverId={currentServerId || ''} />
     </div>
