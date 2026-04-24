@@ -125,43 +125,39 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
           />
           <motion.div 
             initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            className="relative w-full max-w-2xl glass-floating rounded-3xl overflow-hidden shadow-2xl flex h-[500px]"
+            className="relative w-full max-w-2xl glass-floating rounded-3xl overflow-hidden shadow-2xl flex h-[520px]"
           >
-            <div className="w-48 bg-white/5 p-6 border-r border-white/10 flex flex-col gap-2">
+            <div className="w-52 bg-white/5 p-6 border-r border-white/10 flex flex-col gap-2 flex-shrink-0">
               <h3 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-4">Management</h3>
-              <button onClick={() => setTab('general')} className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'general' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-white/5'}`}>Overview</button>
-              <button onClick={() => setTab('members')} className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all ${tab === 'members' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-white/5'}`}>Members</button>
+              <button onClick={() => setTab('general')} className={`text-left px-4 py-2 rounded-xl text-sm font-bold transition-all ${tab === 'general' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-white/5'}`}>Overview</button>
+              <button onClick={() => setTab('members')} className={`text-left px-4 py-2 rounded-xl text-sm font-bold transition-all ${tab === 'members' ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-white/5'}`}>Members</button>
             </div>
-            <div className="flex-1 p-8 flex flex-col">
-              <button onClick={() => setTab('general')} className={`text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'general' ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(255,183,125,0.1)]' : 'text-on-surface-variant hover:bg-white/5'}`}>Server Overview</button>
-              <button onClick={() => setTab('members')} className={`text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${tab === 'members' ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(255,183,125,0.1)]' : 'text-on-surface-variant hover:bg-white/5'}`}>Member Management</button>
-            </div>
-            <div className="flex-1 p-10 flex flex-col min-w-0">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-display font-bold text-white tracking-tight">{tab === 'general' ? 'Server Overview' : 'Members'}</h2>
+            <div className="flex-1 p-8 flex flex-col min-w-0">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-display font-bold text-white tracking-tight">{tab === 'general' ? 'Server Overview' : 'Members'}</h2>
               </div>
               
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                 {tab === 'general' ? (
-                  <div className="space-y-6">
-                    <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-3">Server Name</label>
-                      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border border-white/10 p-4 rounded-xl text-white outline-none focus:border-primary transition-all text-lg font-bold" />
+                  <div className="space-y-5">
+                    <div className="bg-white/5 p-5 rounded-2xl border border-white/5">
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2.5">Server Name</label>
+                      <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border border-white/10 p-3 rounded-xl text-white outline-none focus:border-primary transition-all text-sm font-semibold" />
                     </div>
-                    <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
-                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-3">Description</label>
-                      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full bg-surface-container-highest border border-white/10 p-4 rounded-xl text-white outline-none focus:border-primary transition-all resize-none" />
+                    <div className="bg-white/5 p-5 rounded-2xl border border-white/5">
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2.5">Description</label>
+                      <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full bg-surface-container-highest border border-white/10 p-3 rounded-xl text-white outline-none focus:border-primary transition-all resize-none text-sm" />
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {members.map(m => (
-                      <div key={m.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
-                        <div className="flex items-center gap-4">
-                          <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-10 w-10 rounded-xl border border-white/10 shadow-lg" />
+                      <div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:bg-white/10 transition-all">
+                        <div className="flex items-center gap-3">
+                          <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-9 w-9 rounded-xl border border-white/10" />
                           <div>
-                            <p className="font-bold text-white leading-none mb-1">{m.displayName}</p>
-                            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest leading-none">{server.ownerId === m.id ? 'Owner' : (server.adminIds?.includes(m.id) ? 'Admin' : 'Member')}</p>
+                            <p className="font-bold text-white text-sm leading-tight">{m.displayName}</p>
+                            <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-widest leading-tight">{server.ownerId === m.id ? 'Owner' : (server.adminIds?.includes(m.id) ? 'Admin' : 'Member')}</p>
                           </div>
                         </div>
                         {server.ownerId === user?.uid && m.id !== user?.uid && (
@@ -172,9 +168,9 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
                                 : [...(server.adminIds || []), m.id];
                               await setDoc(doc(db, 'servers', server.id), { adminIds: newAdmins }, { merge: true });
                             }}
-                            className={`p-2.5 rounded-xl transition-all ${server.adminIds?.includes(m.id) ? 'text-primary bg-primary/10 shadow-[0_0_15px_rgba(255,183,125,0.1)]' : 'text-on-surface-variant hover:bg-white/20'}`}
+                            className={`p-2 rounded-lg transition-all ${server.adminIds?.includes(m.id) ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:bg-white/20'}`}
                           >
-                            <Shield size="18" />
+                            <Shield size="16" />
                           </button>
                         )}
                       </div>
@@ -183,9 +179,9 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
                 )}
               </div>
 
-              <div className="flex gap-4 mt-10">
-                <button onClick={handleSave} className="flex-1 btn-primary py-4 rounded-2xl text-lg">Save Changes</button>
-                <button onClick={onClose} className="flex-1 bg-white/5 text-white py-4 rounded-2xl text-lg hover:bg-white/10 transition-all font-bold">Cancel</button>
+              <div className="flex gap-3 mt-8">
+                <button onClick={handleSave} className="flex-1 btn-primary py-3 rounded-xl text-sm">Save Changes</button>
+                <button onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl text-sm hover:bg-white/10 transition-all font-bold">Cancel</button>
               </div>
             </div>
           </motion.div>
