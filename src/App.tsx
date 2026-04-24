@@ -787,14 +787,60 @@ const peerConfig = {
 
 const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream: MediaStream, muted?: boolean, className?: string, displayName?: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   useEffect(() => {
     if (videoRef.current) videoRef.current.srcObject = stream;
   }, [stream]);
+
+  useEffect(() => {
+    if (!stream || muted) return;
+    
+    let audioContext: AudioContext;
+    let analyser: AnalyserNode;
+    let animationId: number;
+
+    try {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const checkAudio = () => {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        const average = sum / bufferLength;
+        setIsSpeaking(average > 15); // Threshold for speaking
+        animationId = requestAnimationFrame(checkAudio);
+      };
+
+      checkAudio();
+    } catch (err) {
+      console.warn("Audio analysis failed", err);
+    }
+
+    return () => {
+      if (animationId) cancelAnimationFrame(animationId);
+      if (audioContext) audioContext.close();
+    };
+  }, [stream, muted]);
+
   return (
     <div className={`relative ${className}`}>
+      {isSpeaking && (
+        <div className="absolute inset-0 ring-4 ring-green-500/50 rounded-inherit z-10 animate-pulse pointer-events-none" />
+      )}
       <video ref={videoRef} autoPlay playsInline muted={muted} className="w-full h-full object-cover" />
       {displayName && (
-        <div className="absolute bottom-4 left-4 bg-black/60 shadow-lg px-3 py-1 rounded-lg text-xs font-bold text-white backdrop-blur-md border border-white/10 flex items-center gap-2">
+        <div className="absolute bottom-4 left-4 bg-black/60 shadow-lg px-3 py-1 rounded-lg text-xs font-bold text-white backdrop-blur-md border border-white/10 flex items-center gap-2 z-20">
+          {isSpeaking && <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" />}
           {displayName}
         </div>
       )}
