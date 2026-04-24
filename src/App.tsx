@@ -854,11 +854,27 @@ const ChatArea = ({ onStartDirectCall }: { onStartDirectCall?: (convId: string) 
 
 const peerConfig = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: "stun:stun.relay.metered.ca:80" },
+    {
+      urls: "turn:global.relay.metered.ca:80",
+      username: "eb2e2a31f6d6e1152fc60d1e",
+      credential: "itVmczd0XVYoC6aw",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:80?transport=tcp",
+      username: "eb2e2a31f6d6e1152fc60d1e",
+      credential: "itVmczd0XVYoC6aw",
+    },
+    {
+      urls: "turn:global.relay.metered.ca:443",
+      username: "eb2e2a31f6d6e1152fc60d1e",
+      credential: "itVmczd0XVYoC6aw",
+    },
+    {
+      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      username: "eb2e2a31f6d6e1152fc60d1e",
+      credential: "itVmczd0XVYoC6aw",
+    },
   ],
 };
 
