@@ -132,15 +132,13 @@ service cloud.firestore {
 
     // Call Signaling
     match /calls/{callId} {
-      allow create: if isSignedIn() && incoming().callerId == request.auth.uid && isValidCallSignal(incoming());
-      allow get, update: if isSignedIn();
-      allow list: if false; // Only direct lookup
+      allow read, write: if isSignedIn();
 
       match /callerCandidates/{candId} {
-        allow read, list, create: if isSignedIn();
+        allow read, write: if isSignedIn();
       }
       match /receiverCandidates/{candId} {
-        allow read, list, create: if isSignedIn();
+        allow read, write: if isSignedIn();
       }
     }
 

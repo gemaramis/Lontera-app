@@ -779,6 +779,9 @@ const peerConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
   ],
 };
 
@@ -855,6 +858,19 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
         const unsubParticipants = onSnapshot(participantsQuery, (snapshot) => {
           const parts = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           setParticipants(parts);
+
+          // Cleanup disconnected peers
+          Object.keys(peerConnections.current).forEach(uid => {
+            if (!parts.some(p => p.uid === uid)) {
+              peerConnections.current[uid].close();
+              delete peerConnections.current[uid];
+              setRemoteStreams(prev => {
+                const next = { ...prev };
+                delete next[uid];
+                return next;
+              });
+            }
+          });
           
           parts.forEach(async (p: any) => {
             if (p.uid === user?.uid) return;
