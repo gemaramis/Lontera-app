@@ -846,7 +846,7 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
       <video ref={videoRef} autoPlay playsInline muted={muted} className="w-full h-full object-cover" />
       {displayName && (
         <div className="absolute bottom-4 left-4 bg-black/60 shadow-lg px-3 py-1 rounded-lg text-xs font-bold text-white backdrop-blur-md border border-white/10 flex items-center gap-2 z-20">
-          {isSpeaking && <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" />}
+          <div className={`w-2 h-2 rounded-full transition-all duration-300 ${isSpeaking ? 'bg-green-600 animate-bounce' : 'bg-white/20'}`} />
           {displayName}
         </div>
       )}
