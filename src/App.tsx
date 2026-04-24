@@ -32,7 +32,7 @@ import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, set
 import { db } from './lib/firebase';
 
 const TopNavBar = () => {
-  const { user } = useApp();
+  const { user, profileData } = useApp();
   return (
     <header className="h-16 fixed top-0 w-full z-50 bg-[#121214]/70 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 shadow-[0_0_20px_rgba(233,179,255,0.05)]">
       <div className="flex items-center gap-10">
@@ -54,9 +54,9 @@ const TopNavBar = () => {
           <button className="text-lontera-muted hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><Settings size="20" /></button>
         </div>
         <div className="flex items-center gap-3 pl-4 border-l border-white/10">
-          <span className="hidden sm:block text-xs font-semibold text-white/50 underline-offset-4 cursor-pointer hover:text-white transition-colors">{user?.displayName}</span>
+          <span className="hidden sm:block text-xs font-semibold text-white/50 underline-offset-4 cursor-pointer hover:text-white transition-colors">{profileData?.displayName || user?.email}</span>
           <img 
-            src={user?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.displayName}`} 
+            src={profileData?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${profileData?.displayName || 'U'}`} 
             className="h-8 w-8 rounded-full border border-lontera-outline/50 object-cover" 
             alt="user" 
           />
@@ -157,21 +157,25 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
   const { currentServerId, currentChannelId, setCurrentChannelId, currentConversationId, setCurrentConversationId, user } = useApp();
   const [channels, setChannels] = useState<any[]>([]);
   const [conversations, setConversations] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
+    const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(50)), (s) => {
+      setUsers(s.docs.map(d => ({id: d.id, ...d.data()})));
+    });
     if (!currentServerId) {
-      if (!user) return;
+      if (!user) return unsubUsers;
       const q = query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         setConversations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
-      return unsubscribe;
+      return () => { unsubUsers(); unsubscribe(); };
     }
     const q = query(collection(db, `servers/${currentServerId}/channels`));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setChannels(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
-    return unsubscribe;
+    return () => { unsubUsers(); unsubscribe(); };
   }, [currentServerId, user]);
 
   const createChannel = async (type: 'text' | 'voice') => {
@@ -202,6 +206,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
           <div className="space-y-0.5">
             {conversations.map(conv => {
               const otherParticipantId = conv.participants.find((p: string) => p !== user?.uid);
+              const friend = users.find(u => u.id === otherParticipantId);
               return (
                 <div 
                   key={conv.id} 
@@ -211,8 +216,8 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
                     setCurrentConversationId(conv.id);
                   }}
                 >
-                  <div className="h-8 w-8 rounded-full bg-lontera-surface border border-white/10" />
-                  <span className="text-sm font-medium truncate">Friend ({otherParticipantId?.substring(0, 4)})</span>
+                  <img src={friend?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${friend?.displayName || 'U'}`} className="h-8 w-8 rounded-full border border-white/10 object-cover" alt="" />
+                  <span className="text-sm font-medium truncate">{friend?.displayName || `Friend (${otherParticipantId?.substring(0, 4)})`}</span>
                 </div>
               );
             })}
@@ -307,7 +312,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
 };
 
 const ChatArea = () => {
-  const { currentServerId, currentChannelId, currentConversationId, user } = useApp();
+  const { currentServerId, currentChannelId, currentConversationId, user, profileData } = useApp();
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [channel, setChannel] = useState<any>(null);
@@ -371,16 +376,16 @@ const ChatArea = () => {
       await addDoc(collection(db, `servers/${currentServerId}/channels/${currentChannelId}/messages`), {
         content,
         authorId: user.uid,
-        authorName: user.displayName,
-        authorPhoto: user.photoURL,
+        authorName: profileData?.displayName || user.displayName || 'Unknown',
+        authorPhoto: profileData?.photoURL || user.photoURL || '',
         createdAt: serverTimestamp()
       });
     } else if (currentConversationId) {
       await addDoc(collection(db, `conversations/${currentConversationId}/messages`), {
         content,
         authorId: user.uid,
-        authorName: user.displayName,
-        authorPhoto: user.photoURL,
+        authorName: profileData?.displayName || user.displayName || 'Unknown',
+        authorPhoto: profileData?.photoURL || user.photoURL || '',
         createdAt: serverTimestamp()
       });
       await setDoc(doc(db, 'conversations', currentConversationId), {
@@ -533,7 +538,7 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
 };
 
 const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, channelId: string, channelName: string }) => {
-  const { user } = useApp();
+  const { user, profileData } = useApp();
   const [isVideo, setIsVideo] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -564,8 +569,8 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
         const participantRef = doc(db, `servers/${serverId}/channels/${channelId}/participants/${user?.uid}`);
         await setDoc(participantRef, {
           uid: user?.uid,
-          displayName: user?.displayName,
-          photoURL: user?.photoURL,
+          displayName: profileData?.displayName || user?.displayName || 'Unknown',
+          photoURL: profileData?.photoURL || user?.photoURL || '',
           joinedAt: serverTimestamp(),
           isMuted: false,
           isStreaming: false
@@ -712,7 +717,7 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
             />
             {!localStream.getVideoTracks()[0]?.enabled && (
               <div className="absolute inset-0 bg-lontera-surface flex items-center justify-center">
-                 <img src={user?.photoURL || ''} className="h-24 w-24 rounded-full border-4 border-lontera-bg shadow-xl" alt="user" />
+                 <img src={profileData?.photoURL || user?.photoURL || ''} className="h-24 w-24 rounded-full border-4 border-lontera-bg shadow-xl" alt="user" />
               </div>
             )}
             <div className="absolute top-4 right-4 bg-black/60 p-2 rounded-full backdrop-blur-md border border-white/10">
@@ -774,13 +779,12 @@ const UserList = () => {
   const [members, setMembers] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!currentServerId) return;
     const q = query(collection(db, 'users'), limit(50));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     return unsubscribe;
-  }, [currentServerId]);
+  }, []);
 
   const startConversation = async (otherUserId: string) => {
     if (!user || user.uid === otherUserId) return;

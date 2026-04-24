@@ -3,13 +3,13 @@
 
 @theme {
   /* Design Palette */
-  --color-lontera-bg: #131315;
-  --color-lontera-surface: #201f21;
-  --color-lontera-primary: #e9b3ff;
-  --color-lontera-secondary: #00eefc;
+  --color-lontera-bg: #0d0725; /* Dark tint of the palette's blue #210B92 */
+  --color-lontera-surface: #180d44; /* Slightly lighter blue */
+  --color-lontera-primary: #FF674A; /* Orange */
+  --color-lontera-secondary: #B0CD51; /* Light Green */
   --color-lontera-on-surface: #e5e1e4;
-  --color-lontera-outline: #4f4352;
-  --color-lontera-muted: #9b8c9e;
+  --color-lontera-outline: #382c6d;
+  --color-lontera-muted: #9aa1bc;
   
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;

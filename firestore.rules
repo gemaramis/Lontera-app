@@ -107,7 +107,7 @@ service cloud.firestore {
     // Call Signaling
     match /calls/{callId} {
       allow create: if isSignedIn() && incoming().callerId == request.auth.uid && isValidCallSignal(incoming());
-      allow get, update: if isSignedIn() && (existing().callerId == request.auth.uid || existing().receiverId == request.auth.uid);
+      allow get, update: if isSignedIn();
       allow list: if false; // Only direct lookup
 
       match /callerCandidates/{candId} {
