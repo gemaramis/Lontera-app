@@ -109,7 +109,8 @@ service cloud.firestore {
       // Channels
       match /channels/{channelId} {
         allow read, list: if isServerMember(serverId) || isServerOwner(serverId);
-        allow create, update, delete: if (isServerOwner(serverId) || isServerAdmin(serverId)) && isValidChannel(incoming());
+        allow create, update: if (isServerOwner(serverId) || isServerAdmin(serverId)) && isValidChannel(incoming());
+        allow delete: if isServerOwner(serverId) || isServerAdmin(serverId);
 
         // Participants in Voice Channel
         match /participants/{participantId} {
