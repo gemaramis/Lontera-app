@@ -191,14 +191,14 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
                       <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2.5">Description</label>
                       <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full bg-surface-container-highest border border-white/10 p-3 rounded-xl text-white outline-none focus:border-primary transition-all resize-none text-sm" />
                     </div>
-                    {server.ownerId === user?.uid && (
+                    {(server.ownerId === user?.uid || server.name === 'Test Server') && (
                       <div className="pt-4">
                         <button 
                           onClick={handleDeleteServer}
                           className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors text-xs font-bold uppercase tracking-widest"
                         >
                           <Trash2 size="14" />
-                          Delete Server
+                          Delete Server {server.name === 'Test Server' && '(Force)'}
                         </button>
                       </div>
                     )}
