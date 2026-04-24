@@ -1315,13 +1315,19 @@ const FriendsView = () => {
 
   const sendRequest = async (toId: string) => {
     if (!user) return;
-    await setDoc(doc(db, `users/${toId}/friendRequests`, user.uid), {
-      fromId: user.uid,
-      status: 'pending',
-      timestamp: serverTimestamp(),
-      displayName: user.displayName || 'Unknown',
-      photoURL: user.photoURL || ''
-    });
+    try {
+      await setDoc(doc(db, `users/${toId}/friendRequests`, user.uid), {
+        fromId: user.uid,
+        status: 'pending',
+        timestamp: serverTimestamp(),
+        displayName: user.displayName || 'Unknown',
+        photoURL: user.photoURL || ''
+      });
+      alert("Friend request sent!");
+    } catch (err: any) {
+      console.error("Friend request error:", err);
+      alert(`Failed to send request: ${err.message}`);
+    }
   };
 
   const acceptRequest = async (fromId: string) => {

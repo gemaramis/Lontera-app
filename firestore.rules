@@ -68,6 +68,16 @@ service cloud.firestore {
       allow create: if isOwner(userId) && isValidUser(incoming());
       allow update: if isOwner(userId) && isValidUser(incoming()) &&
                     incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'status', 'customStatus', 'lastSeen', 'email']);
+
+      match /friends/{friendId} {
+        allow read, list: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
+      match /friendRequests/{requestId} {
+        allow read, list, delete: if isOwner(userId);
+        allow create: if isSignedIn(); // Anyone can send a request
+      }
     }
 
     // Servers
