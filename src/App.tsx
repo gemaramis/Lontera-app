@@ -617,7 +617,7 @@ const ChatArea = () => {
             {channel ? <Hash size="44" className="text-primary" /> : <Users size="44" className="text-primary" />}
           </div>
           <h1 className="text-white text-4xl font-display font-bold mb-3 tracking-tight">Welcome to {channel ? `#${channel.name}` : 'the conversation'}!</h1>
-          <p className="text-on-surface-variant text-lg">This is the start of the {channel ? `#${channel.name} channel` : 'conversation'}. Let's make it legendary.</p>
+          <p className="text-on-surface-variant text-lg">This is the beginning of your legendary journey here. Type a message below to start chatting.</p>
         </div>
 
         <div className="flex flex-col gap-6">
@@ -644,29 +644,7 @@ const ChatArea = () => {
               </div>
             </motion.div>
           ))}
-          
-          {/* Example Bot Message from Design */}
-          <div className="flex gap-4 group hover:bg-white/[0.02] -mx-4 px-4 py-2 rounded-xl transition-all">
-            <div className="w-10 h-10 rounded-xl mt-1 bg-surface-container flex items-center justify-center border border-white/10 relative">
-              <div className="absolute -inset-1 rounded-xl bg-secondary/20 blur-sm"></div>
-              <Cpu size="20" className="text-secondary relative z-10" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-baseline gap-3 mb-1">
-                <span className="font-bold text-secondary font-display text-sm flex items-center gap-2">
-                  NeonBot
-                  <span className="bg-primary/20 text-primary text-[9px] uppercase font-bold px-1.5 py-0.5 rounded-sm tracking-widest">BOT</span>
-                </span>
-                <span className="text-on-surface-variant text-[10px] font-bold opacity-60">Today at 10:45 AM</span>
-              </div>
-              <div className="text-on-surface font-sans text-[15px] leading-relaxed mb-3">
-                Check out this crazy screenshot from the new Cyber-punk update. The lighting engine is insane.
-              </div>
-              <div className="inline-block p-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl max-w-sm overflow-hidden group/img">
-                <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCywbjGyg-Q7ftEFPPOjQb2kE_EqfrYdYtNwK3yfJxSasaJJdg8jJYqnSwTziL_6Fhr4hm4hfnMLbJPBtSE7jNPzo3vpJs5OHYK8vxErIQG3cNJmcvaUD2_0261lGeFEPmY8Ya-3s-TX0xwiHuiVPnKY2IScwFGWtrXFzDyTnbHTwhp9ggN61-BbTUnIRYYd4dFyd7sGDLqr0HTyqmepCt7Mu1k0XEfYZQjveZ2VLKtYZJ5MF8hQh8thkBC403EdhXtiR17TvsPzmuI" className="w-full rounded-lg hover:opacity-80 transition-all cursor-zoom-in" alt="attachment" />
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
 
