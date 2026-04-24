@@ -29,7 +29,6 @@ import {
   MoreHorizontal,
   MoreVertical,
   Compass,
-  Library,
   Check,
   X,
   Mail,
@@ -288,8 +287,7 @@ const TopNavBar = ({ onOpenProfile, activeView, onViewChange }: { onOpenProfile:
         <nav className="hidden md:flex items-center gap-6">
           {[
             { id: 'explore', label: 'Explore', icon: Compass },
-            { id: 'friends', label: 'Friends', icon: Users },
-            { id: 'library', label: 'Library', icon: Library }
+            { id: 'friends', label: 'Friends', icon: Users }
           ].map((item) => (
             <button 
               key={item.id} 
