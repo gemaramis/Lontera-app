@@ -794,7 +794,7 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
   }, [stream]);
 
   useEffect(() => {
-    if (!stream || muted) return;
+    if (!stream) return;
     
     let audioContext: AudioContext;
     let analyser: AnalyserNode;
@@ -802,9 +802,12 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
 
     try {
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Check if there's an audio track
+      if (stream.getAudioTracks().length === 0) return;
+
       const source = audioContext.createMediaStreamSource(stream);
       analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
+      analyser.fftSize = 256; // Smaller for better performance
       source.connect(analyser);
 
       const bufferLength = analyser.frequencyBinCount;
@@ -817,7 +820,9 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
           sum += dataArray[i];
         }
         const average = sum / bufferLength;
-        setIsSpeaking(average > 15); // Threshold for speaking
+        // Threshold check + ensure the track is actually enabled
+        const isActuallyEnabled = stream.getAudioTracks()[0]?.enabled;
+        setIsSpeaking(isActuallyEnabled && average > 10); 
         animationId = requestAnimationFrame(checkAudio);
       };
 
@@ -830,7 +835,7 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
       if (animationId) cancelAnimationFrame(animationId);
       if (audioContext) audioContext.close();
     };
-  }, [stream, muted]);
+  }, [stream]);
 
   return (
     <div className={`relative ${className}`}>
