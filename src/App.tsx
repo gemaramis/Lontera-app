@@ -956,39 +956,199 @@ const VoiceArea = ({ serverId, channelId, channelName, onLeave }: { serverId: st
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
   const [participants, setParticipants] = useState<any[]>([]);
   const screenTrackRef = useRef<MediaStreamTrack | null>(null);
-  
+
+  // Maps uid -> RTCPeerConnection
   const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
+  // Buffer ICE candidates that arrive before remote description is set
+  const pendingCandidates = useRef<Record<string, RTCIceCandidateInit[]>>({});
   const localStreamRef = useRef<MediaStream | null>(null);
+  const activeRef = useRef(true);
 
   const getCallId = (u1: string, u2: string) => {
     const sorted = [u1, u2].sort();
     return `${serverId}_${channelId}_${sorted[0]}_${sorted[1]}`;
   };
 
+  const addBufferedCandidates = async (pc: RTCPeerConnection, uid: string) => {
+    const buffered = pendingCandidates.current[uid] || [];
+    for (const c of buffered) {
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch {}
+    }
+    pendingCandidates.current[uid] = [];
+  };
+
+  const createPeerConnection = (remoteUid: string, stream: MediaStream): RTCPeerConnection => {
+    const pc = new RTCPeerConnection(peerConfig);
+    peerConnections.current[remoteUid] = pc;
+
+    // Add all local tracks
+    stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+    // When we get remote audio/video
+    pc.ontrack = (event) => {
+      if (!activeRef.current) return;
+      setRemoteStreams(prev => ({ ...prev, [remoteUid]: event.streams[0] }));
+    };
+
+    // ICE connection state logging
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[RTC] ICE state with ${remoteUid}:`, pc.iceConnectionState);
+      if (pc.iceConnectionState === 'failed') {
+        pc.restartIce();
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log(`[RTC] Connection state with ${remoteUid}:`, pc.connectionState);
+    };
+
+    return pc;
+  };
+
+  const startCallAs = async (
+    role: 'caller' | 'receiver',
+    remoteUid: string,
+    stream: MediaStream
+  ) => {
+    const callId = getCallId(user!.uid, remoteUid);
+    const callRef = doc(db, 'calls', callId);
+
+    // Clean up old connection for this peer if exists
+    if (peerConnections.current[remoteUid]) {
+      peerConnections.current[remoteUid].close();
+      delete peerConnections.current[remoteUid];
+    }
+
+    const pc = createPeerConnection(remoteUid, stream);
+
+    if (role === 'caller') {
+      // ── CALLER: create offer ──────────────────────────────────────
+      const sessionId = `${Date.now()}_${user!.uid}`;
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate && activeRef.current) {
+          addDoc(collection(db, `calls/${callId}/callerCandidates`), {
+            ...e.candidate.toJSON(),
+            sessionId
+          });
+        }
+      };
+
+      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+      await pc.setLocalDescription(offer);
+
+      // Write offer — overwrite any stale call doc
+      await setDoc(callRef, {
+        sessionId,
+        callerId: user!.uid,
+        receiverId: remoteUid,
+        offer: { type: offer.type, sdp: offer.sdp },
+        answer: null,
+        updatedAt: serverTimestamp()
+      });
+
+      // Listen for answer
+      onSnapshot(callRef, async (snap) => {
+        if (!activeRef.current) return;
+        const d = snap.data();
+        if (d?.sessionId === sessionId && d?.answer && !pc.currentRemoteDescription) {
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(d.answer));
+            await addBufferedCandidates(pc, remoteUid);
+          } catch (err) {
+            console.error('[RTC] setRemoteDescription (caller) failed:', err);
+          }
+        }
+      });
+
+      // Listen for receiver ICE candidates
+      onSnapshot(collection(db, `calls/${callId}/receiverCandidates`), (snap) => {
+        snap.docChanges().forEach(async (change) => {
+          if (change.type !== 'added') return;
+          const d = change.doc.data();
+          if (d.sessionId !== sessionId) return;
+          const candidate = { candidate: d.candidate, sdpMid: d.sdpMid, sdpMLineIndex: d.sdpMLineIndex };
+          if (pc.currentRemoteDescription) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+          } else {
+            pendingCandidates.current[remoteUid] = [...(pendingCandidates.current[remoteUid] || []), candidate];
+          }
+        });
+      });
+
+    } else {
+      // ── RECEIVER: wait for offer then answer ──────────────────────
+      onSnapshot(callRef, async (snap) => {
+        if (!activeRef.current) return;
+        const d = snap.data();
+
+        if (!d?.offer || !d?.sessionId || pc.currentRemoteDescription) return;
+        if (d.receiverId !== user!.uid) return; // not for us
+
+        const sessionId = d.sessionId;
+
+        pc.onicecandidate = (e) => {
+          if (e.candidate && activeRef.current) {
+            addDoc(collection(db, `calls/${callId}/receiverCandidates`), {
+              ...e.candidate.toJSON(),
+              sessionId
+            });
+          }
+        };
+
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
+          await addBufferedCandidates(pc, remoteUid);
+
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+
+          await setDoc(callRef, {
+            answer: { type: answer.type, sdp: answer.sdp },
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        } catch (err) {
+          console.error('[RTC] Answer creation failed:', err);
+        }
+
+        // Listen for caller ICE candidates
+        onSnapshot(collection(db, `calls/${callId}/callerCandidates`), (snap) => {
+          snap.docChanges().forEach(async (change) => {
+            if (change.type !== 'added') return;
+            const d2 = change.doc.data();
+            if (d2.sessionId !== sessionId) return;
+            const candidate = { candidate: d2.candidate, sdpMid: d2.sdpMid, sdpMLineIndex: d2.sdpMLineIndex };
+            if (pc.currentRemoteDescription) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch {}
+            } else {
+              pendingCandidates.current[remoteUid] = [...(pendingCandidates.current[remoteUid] || []), candidate];
+            }
+          });
+        });
+      });
+    }
+  };
+
   useEffect(() => {
-    let active = true;
+    activeRef.current = true;
+
     const startStreaming = async () => {
       try {
         let stream: MediaStream;
         try {
           stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        } catch (err) {
-          console.warn("Could not get video, falling back to audio only", err);
+        } catch {
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         }
-        if (!active) {
-          stream.getTracks().forEach(t => t.stop());
-          return;
-        }
+        if (!activeRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+
         localStreamRef.current = stream;
         setLocalStream(stream);
 
-        // Disable video by default
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack) {
-          videoTrack.enabled = false;
-          setIsVideo(false);
-        }
+        // Video off by default
+        stream.getVideoTracks().forEach(t => { t.enabled = false; });
+        setIsVideo(false);
+
         // Join channel
         const participantRef = doc(db, `servers/${serverId}/channels/${channelId}/participants/${user?.uid}`);
         await setDoc(participantRef, {
@@ -997,19 +1157,22 @@ const VoiceArea = ({ serverId, channelId, channelName, onLeave }: { serverId: st
           photoURL: profileData?.photoURL || user?.photoURL || '',
           joinedAt: serverTimestamp(),
           isMuted: false,
-          isStreaming: false
         });
 
         // Listen for participants
-        const participantsQuery = query(collection(db, `servers/${serverId}/channels/${channelId}/participants`));
-        const unsubParticipants = onSnapshot(participantsQuery, (snapshot) => {
-          const parts = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        const participantsQuery = query(
+          collection(db, `servers/${serverId}/channels/${channelId}/participants`)
+        );
+
+        const unsubParticipants = onSnapshot(participantsQuery, async (snapshot) => {
+          if (!activeRef.current) return;
+          const parts = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
           setParticipants(parts);
 
-          // Cleanup disconnected peers
+          // Cleanup disconnected participants
           Object.keys(peerConnections.current).forEach(uid => {
             if (!parts.some((p: any) => p.uid === uid)) {
-              peerConnections.current[uid].close();
+              peerConnections.current[uid]?.close();
               delete peerConnections.current[uid];
               setRemoteStreams(prev => {
                 const next = { ...prev };
@@ -1018,184 +1181,83 @@ const VoiceArea = ({ serverId, channelId, channelName, onLeave }: { serverId: st
               });
             }
           });
-          
-          parts.forEach(async (p: any) => {
-            if (p.uid === user?.uid) return;
-            if (peerConnections.current[p.uid]) return; // Already connected
 
-            // Create connection
-            const pc = new RTCPeerConnection(peerConfig);
-            peerConnections.current[p.uid] = pc;
+          // Connect to new participants
+          for (const p of parts) {
+            if (p.uid === user?.uid) continue;
+            if (peerConnections.current[p.uid]) continue; // already initiated
 
-            // Add local tracks
-            stream.getTracks().forEach(track => pc.addTrack(track, stream));
-
-            // Remote tracks
-            pc.ontrack = (event) => {
-              setRemoteStreams(prev => ({ ...prev, [p.uid]: event.streams[0] }));
-            };
-
-            const callId = getCallId(user!.uid, p.uid);
-            const callRef = doc(db, 'calls', callId);
-
-            // Signaling Logic
-            if (user!.uid > p.uid) {
-              // I am the caller
-              const sessionId = Date.now().toString();
-              const sessionRef = doc(collection(callRef, 'sessions'), sessionId);
-
-              // ICE Candidates
-              pc.onicecandidate = (event) => {
-                if (event.candidate) {
-                  addDoc(collection(sessionRef, 'callerCandidates'), event.candidate.toJSON());
-                }
-              };
-
-              // Offer
-              const offer = await pc.createOffer();
-              await pc.setLocalDescription(offer);
-              await setDoc(callRef, {
-                sessionId,
-                callerId: user!.uid,
-                receiverId: p.uid,
-                offer: { type: offer.type, sdp: offer.sdp },
-                updatedAt: serverTimestamp()
-              });
-
-              // Listen for answer
-              onSnapshot(callRef, async (docSnap) => {
-                const data = docSnap.data();
-                if (data?.sessionId === sessionId && data?.answer && !pc.currentRemoteDescription) {
-                  await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                }
-              });
-
-              // Listen for receiver candidates
-              onSnapshot(collection(sessionRef, 'receiverCandidates'), (candSnap) => {
-                candSnap.docChanges().forEach(async (change) => {
-                  if (change.type === 'added') {
-                    await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-                  }
-                });
-              });
-            } else {
-              // I am the receiver
-              onSnapshot(callRef, async (docSnap) => {
-                const data = docSnap.data();
-                if (data?.offer && data?.sessionId && !pc.currentRemoteDescription) {
-                  const sessionId = data.sessionId;
-                  const sessionRef = doc(collection(callRef, 'sessions'), sessionId);
-
-                  // ICE Candidates
-                  pc.onicecandidate = (event) => {
-                    if (event.candidate) {
-                      addDoc(collection(sessionRef, 'receiverCandidates'), event.candidate.toJSON());
-                    }
-                  };
-
-                  await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                  const answer = await pc.createAnswer();
-                  await pc.setLocalDescription(answer);
-                  await setDoc(callRef, { 
-                    answer: { type: answer.type, sdp: answer.sdp },
-                    updatedAt: serverTimestamp()
-                  }, { merge: true });
-
-                  // Listen for caller candidates
-                  onSnapshot(collection(sessionRef, 'callerCandidates'), (candSnap) => {
-                    candSnap.docChanges().forEach(async (change) => {
-                      if (change.type === 'added') {
-                        await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-                      }
-                    });
-                  });
-                }
-              });
-            }
-          });
+            // Determine role: higher UID string is caller (consistent between both sides)
+            const role: 'caller' | 'receiver' = user!.uid > p.uid ? 'caller' : 'receiver';
+            console.log(`[RTC] Connecting to ${p.displayName} as ${role}`);
+            await startCallAs(role, p.uid, stream);
+          }
         });
 
-        return () => {
-          unsubParticipants();
-        };
+        return () => unsubParticipants();
       } catch (err) {
-        console.error('WebRTC Error:', err);
+        console.error('[RTC] Setup error:', err);
       }
     };
 
     startStreaming();
 
     return () => {
-      active = false;
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(t => t.stop());
-      }
+      activeRef.current = false;
+      localStreamRef.current?.getTracks().forEach(t => t.stop());
+      screenTrackRef.current?.stop();
+      Object.values(peerConnections.current).forEach(pc => pc.close());
+      peerConnections.current = {};
       deleteDoc(doc(db, `servers/${serverId}/channels/${channelId}/participants/${user?.uid}`));
-      Object.values(peerConnections.current).forEach((pc: any) => pc.close());
     };
   }, [serverId, channelId, user?.uid]);
 
   const toggleMute = () => {
-    if (localStream) {
-      const audioTrack = localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const audioTrack = stream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      setIsMuted(!audioTrack.enabled);
+      // Sync localStream state reference
+      if (localStream) {
+        const t = localStream.getAudioTracks()[0];
+        if (t) t.enabled = audioTrack.enabled;
       }
     }
   };
 
   const toggleScreenShare = async () => {
-    if (!localStream) return;
+    const stream = localStreamRef.current;
+    if (!stream) return;
+
     if (isScreenSharing) {
-      // Stop screen share, restore camera
       screenTrackRef.current?.stop();
       screenTrackRef.current = null;
-      const cam = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
-      if (cam) {
-        const camTrack = cam.getVideoTracks()[0];
-        const sender = (Object.values(peerConnections.current) as RTCPeerConnection[]).map((pc) =>
-          pc.getSenders().find(s => s.track?.kind === 'video')
-        ).find(Boolean) as RTCRtpSender | undefined;
-        if (sender && camTrack) await sender.replaceTrack(camTrack);
-        const oldVideo = localStream.getVideoTracks()[0];
-        if (oldVideo) localStream.removeTrack(oldVideo);
-        localStream.addTrack(camTrack);
-      }
       setIsScreenSharing(false);
+      setIsVideo(false);
     } else {
       try {
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const screenTrack = displayStream.getVideoTracks()[0];
+        const ds = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+        const screenTrack = ds.getVideoTracks()[0];
         screenTrackRef.current = screenTrack;
 
-        // Replace video track in all peer connections
-        (Object.values(peerConnections.current) as RTCPeerConnection[]).forEach((pc) => {
+        (Object.values(peerConnections.current) as RTCPeerConnection[]).forEach(pc => {
           const sender = pc.getSenders().find(s => s.track?.kind === 'video');
           if (sender) sender.replaceTrack(screenTrack);
         });
 
-        // Replace in local stream for preview
-        const oldVideo = localStream.getVideoTracks()[0];
-        if (oldVideo) localStream.removeTrack(oldVideo);
-        localStream.addTrack(screenTrack);
-
-        // Auto stop when user clicks browser's stop sharing
         screenTrack.onended = () => {
           setIsScreenSharing(false);
           screenTrackRef.current = null;
         };
-
         setIsScreenSharing(true);
         setIsVideo(true);
-      } catch (err) {
-        console.warn('Screen share cancelled or failed:', err);
-      }
+      } catch { /* user cancelled */ }
     }
   };
 
   const leaveCall = () => {
-    // Cleanup happens in useEffect return, just clear channel
     if (onLeave) onLeave();
     else setCurrentChannelId(null);
   };
@@ -1913,45 +1975,46 @@ const FriendsView = () => {
 
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
         {activeTab === 'add' ? (
-          <div className="max-w-2xl">
-            <h3 className="text-white font-display font-bold text-lg mb-2">Add Friend</h3>
-            <p className="text-on-surface-variant text-sm mb-6">You can add friends with their Lontera username or email.</p>
-            <div className="relative mb-8">
-              <input 
-                placeholder="Search Lontera users..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-surface-container-highest border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-primary transition-all pr-12 shadow-xl"
-              />
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant" size="20" />
-            </div>
+          <>
+            <div className="max-w-2xl">
+              <h3 className="text-white font-display font-bold text-lg mb-2">Add Friend</h3>
+              <p className="text-on-surface-variant text-sm mb-6">You can add friends with their Lontera username or email.</p>
+              <div className="relative mb-8">
+                <input 
+                  placeholder="Search Lontera users..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-surface-container-highest border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-primary transition-all pr-12 shadow-xl"
+                />
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant" size="20" />
+              </div>
 
-            <div className="space-y-3">
-              {filteredUsers.map(u => (
-                <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
-                  <div className="flex items-center gap-4">
-                    <img src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${u.displayName}`} className="h-12 w-12 rounded-2xl object-cover" alt="" />
-                    <div>
-                      <h4 className="text-white font-bold text-sm leading-tight">{u.displayName}</h4>
-                      <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-0.5">{u.status || 'Offline'}</p>
+              <div className="space-y-3">
+                {filteredUsers.map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 group hover:bg-white/10 transition-all">
+                    <div className="flex items-center gap-4">
+                      <img src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${u.displayName}`} className="h-12 w-12 rounded-2xl object-cover" alt="" />
+                      <div>
+                        <h4 className="text-white font-bold text-sm leading-tight">{u.displayName}</h4>
+                        <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-0.5">{u.status || 'Offline'}</p>
+                      </div>
                     </div>
+                    {sentRequests.includes(u.id) ? (
+                      <div className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant bg-white/5 rounded-xl border border-white/5">
+                        <Mail size="14" />
+                        Pending Request
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => sendRequest(u.id)}
+                        className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-primary hover:text-black transition-all"
+                      >
+                        Send Friend Request
+                      </button>
+                    )}
                   </div>
-                  {sentRequests.includes(u.id) ? (
-                    <div className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant bg-white/5 rounded-xl border border-white/5">
-                      <Mail size="14" />
-                      Pending Request
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => sendRequest(u.id)}
-                      className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-primary hover:text-black transition-all"
-                    >
-                      Send Friend Request
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
             </div>
             
             <div className="mt-12 pt-8 border-t border-white/5">
@@ -1964,7 +2027,7 @@ const FriendsView = () => {
                 Clean up incomplete profiles
               </button>
             </div>
-          </div>
+          </>
         ) : activeTab === 'pending' ? (
           <div className="space-y-8">
             <div>
