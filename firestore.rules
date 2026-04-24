@@ -76,7 +76,7 @@ service cloud.firestore {
 
       match /friendRequests/{requestId} {
         allow read, list, delete: if isOwner(userId);
-        allow create: if isSignedIn(); // Anyone can send a request
+        allow create, update: if isSignedIn() && incoming().fromId == request.auth.uid; 
       }
     }
 
