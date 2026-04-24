@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { 
   Hash, 
@@ -11,6 +11,7 @@ import {
   PhoneOff,
   Video,
   Monitor,
+  MonitorOff,
   Search,
   Inbox,
   HelpCircle,
@@ -34,7 +35,10 @@ import {
   Mail,
   MessageSquare,
   MicOff,
-  VideoOff
+  VideoOff,
+  Phone,
+  PhoneIncoming,
+  PhoneMissed
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
@@ -595,13 +599,15 @@ const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSe
   );
 };
 
-const ChatArea = () => {
+const ChatArea = ({ onStartDirectCall }: { onStartDirectCall?: (convId: string) => void }) => {
   const { currentServerId, currentChannelId, currentConversationId, user, profileData } = useApp();
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [channel, setChannel] = useState<any>(null);
   const [conversation, setConversation] = useState<any>(null);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setMessages([]); // Clear on switch
@@ -649,6 +655,45 @@ const ChatArea = () => {
     }
   }, [currentServerId, currentChannelId, currentConversationId]);
 
+  // Listen for typing indicators
+  useEffect(() => {
+    if (!currentConversationId && !currentChannelId) return;
+    const typingPath = currentConversationId
+      ? `conversations/${currentConversationId}/typing`
+      : `servers/${currentServerId}/channels/${currentChannelId}/typing`;
+
+    const unsubTyping = onSnapshot(collection(db, typingPath), (snap) => {
+      const now = Date.now();
+      const active = snap.docs
+        .filter(d => d.id !== user?.uid && (d.data().ts?.toMillis?.() || 0) > now - 5000)
+        .map(d => d.data().displayName || 'Someone');
+      setTypingUsers(active);
+    });
+    return unsubTyping;
+  }, [currentConversationId, currentChannelId, currentServerId, user?.uid]);
+
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+    if (!user) return;
+    const typingPath = currentConversationId
+      ? `conversations/${currentConversationId}/typing`
+      : currentServerId && currentChannelId
+        ? `servers/${currentServerId}/channels/${currentChannelId}/typing`
+        : null;
+
+    if (!typingPath) return;
+
+    await setDoc(doc(db, typingPath, user.uid), {
+      displayName: profileData?.displayName || user.displayName || 'Someone',
+      ts: serverTimestamp()
+    }, { merge: true });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(async () => {
+      await deleteDoc(doc(db, typingPath, user.uid)).catch(() => {});
+    }, 4000);
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !user) return;
@@ -677,6 +722,16 @@ const ChatArea = () => {
         updatedAt: serverTimestamp()
       }, { merge: true });
     }
+    // Clear typing indicator after send
+    if (user) {
+      const typingPath = currentConversationId
+        ? `conversations/${currentConversationId}/typing`
+        : currentServerId && currentChannelId
+          ? `servers/${currentServerId}/channels/${currentChannelId}/typing`
+          : null;
+      if (typingPath) await deleteDoc(doc(db, typingPath, user.uid)).catch(() => {});
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    }
   };
 
   if (!currentChannelId && !currentConversationId) {
@@ -697,6 +752,7 @@ const ChatArea = () => {
 
   const headerTitle = channel ? channel.name : (conversation ? 'Private Conversation' : 'Loading...');
   const placeholder = channel ? `Message #${channel.name}` : 'Message Friend';
+  const isDM = !!currentConversationId && !currentServerId;
 
   return (
     <div className="flex-1 flex flex-col bg-surface-container-low relative">
@@ -708,6 +764,16 @@ const ChatArea = () => {
           <p className="text-xs text-on-surface-variant truncate max-w-sm">Welcome to the conversation. Keep it clean.</p>
         </div>
         <div className="flex items-center gap-4 text-on-surface-variant">
+          {isDM && onStartDirectCall && currentConversationId && (
+            <button
+              onClick={() => onStartDirectCall(currentConversationId)}
+              title="Start Voice/Video Call"
+              className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-400 rounded-xl hover:bg-green-500 hover:text-black transition-all text-xs font-bold uppercase tracking-widest"
+            >
+              <Phone size="15" />
+              Call
+            </button>
+          )}
           <Search size="18" className="cursor-pointer hover:text-white" />
           <Inbox size="18" className="cursor-pointer hover:text-white" />
           <HelpCircle size="18" className="cursor-pointer hover:text-white" />
@@ -752,18 +818,29 @@ const ChatArea = () => {
       </div>
 
       <div className="p-6 pt-0">
+        {typingUsers.length > 0 && (
+          <div className="pb-2 px-1 flex items-center gap-2">
+            <div className="flex gap-0.5">
+              {[0,1,2].map(i => (
+                <span key={i} className="w-1.5 h-1.5 rounded-full bg-on-surface-variant animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+              ))}
+            </div>
+            <span className="text-xs text-on-surface-variant font-medium">
+              {typingUsers.slice(0, 2).join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing…
+            </span>
+          </div>
+        )}
         <form onSubmit={sendMessage} className="bg-surface-container-highest rounded-2xl flex items-center px-5 py-3.5 gap-4 shadow-xl border-b-2 border-transparent focus-within:border-secondary transition-all">
           <div className="bg-on-surface-variant/20 hover:bg-primary transition-all h-7 w-7 rounded-full flex items-center justify-center cursor-pointer group">
             <Plus size="18" className="text-on-surface-variant group-hover:text-black" />
           </div>
           <input 
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             placeholder={placeholder} 
             className="flex-1 bg-transparent outline-none text-on-surface placeholder:text-outline text-[15px] font-medium" 
           />
           <div className="flex items-center gap-4 text-on-surface-variant">
-            <Plus size="20" className="cursor-pointer hover:text-white" />
             <Search size="20" className="cursor-pointer hover:text-white" />
             <button type="submit" className="text-primary hover:scale-110 transition-transform">
               <Send size="22" />
@@ -854,13 +931,15 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
   );
 };
 
-const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, channelId: string, channelName: string }) => {
-  const { user, profileData } = useApp();
+const VoiceArea = ({ serverId, channelId, channelName, onLeave }: { serverId: string, channelId: string, channelName: string, onLeave?: () => void }) => {
+  const { user, profileData, setCurrentChannelId } = useApp();
   const [isVideo, setIsVideo] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
   const [participants, setParticipants] = useState<any[]>([]);
+  const screenTrackRef = useRef<MediaStreamTrack | null>(null);
   
   const peerConnections = useRef<Record<string, RTCPeerConnection>>({});
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -1050,9 +1129,59 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
     }
   };
 
+  const toggleScreenShare = async () => {
+    if (!localStream) return;
+    if (isScreenSharing) {
+      // Stop screen share, restore camera
+      screenTrackRef.current?.stop();
+      screenTrackRef.current = null;
+      const cam = await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => null);
+      if (cam) {
+        const camTrack = cam.getVideoTracks()[0];
+        const sender = (Object.values(peerConnections.current) as RTCPeerConnection[]).map((pc) =>
+          pc.getSenders().find(s => s.track?.kind === 'video')
+        ).find(Boolean) as RTCRtpSender | undefined;
+        if (sender && camTrack) await sender.replaceTrack(camTrack);
+        const oldVideo = localStream.getVideoTracks()[0];
+        if (oldVideo) localStream.removeTrack(oldVideo);
+        localStream.addTrack(camTrack);
+      }
+      setIsScreenSharing(false);
+    } else {
+      try {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenTrack = displayStream.getVideoTracks()[0];
+        screenTrackRef.current = screenTrack;
+
+        // Replace video track in all peer connections
+        (Object.values(peerConnections.current) as RTCPeerConnection[]).forEach((pc) => {
+          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+          if (sender) sender.replaceTrack(screenTrack);
+        });
+
+        // Replace in local stream for preview
+        const oldVideo = localStream.getVideoTracks()[0];
+        if (oldVideo) localStream.removeTrack(oldVideo);
+        localStream.addTrack(screenTrack);
+
+        // Auto stop when user clicks browser's stop sharing
+        screenTrack.onended = () => {
+          setIsScreenSharing(false);
+          screenTrackRef.current = null;
+        };
+
+        setIsScreenSharing(true);
+        setIsVideo(true);
+      } catch (err) {
+        console.warn('Screen share cancelled or failed:', err);
+      }
+    }
+  };
+
   const leaveCall = () => {
-    // This will trigger cleanup in useEffect
-    window.location.reload(); // Simple way to leave for now, or just navigate
+    // Cleanup happens in useEffect return, just clear channel
+    if (onLeave) onLeave();
+    else setCurrentChannelId(null);
   };
 
   return (
@@ -1109,22 +1238,31 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
               }
             }
           }}
-          className={`p-4 rounded-full transition-all group flex items-center gap-2 ${isVideo ? 'bg-green-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
-          title={isVideo ? "Turn Off Video" : "Turn On Video"}
+          className={`p-4 rounded-full transition-all ${isVideo ? 'bg-green-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          title={isVideo ? 'Turn Off Camera' : 'Turn On Camera'}
         >
           {isVideo ? <Video size="22" /> : <VideoOff size="22" />}
         </button>
 
+        <button
+          onClick={toggleScreenShare}
+          className={`p-4 rounded-full transition-all ${isScreenSharing ? 'bg-blue-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          title={isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}
+        >
+          {isScreenSharing ? <MonitorOff size="22" /> : <Monitor size="22" />}
+        </button>
+
         <button 
           onClick={toggleMute}
-          className={`p-4 rounded-full transition-all group flex items-center gap-2 ${isMuted ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
-          title={isMuted ? "Unmute" : "Mute"}
+          className={`p-4 rounded-full transition-all ${isMuted ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          title={isMuted ? 'Unmute' : 'Mute'}
         >
           {isMuted ? <MicOff size="22" /> : <Mic size="22" />}
         </button>
         <button 
           onClick={leaveCall}
-          className="p-4 bg-error text-on-error hover:bg-error-container rounded-full transition-all shadow-lg"
+          className="p-4 bg-error text-on-error hover:opacity-80 rounded-full transition-all shadow-lg"
+          title="End Call"
         >
           <PhoneOff size="22" />
         </button>
@@ -1132,6 +1270,248 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
     </div>
   );
 };
+
+// ── Direct Voice/Video Call for DM Conversations ───────────────────────────
+const DirectCallArea = ({ conversationId, onLeave }: { conversationId: string, onLeave: () => void }) => {
+  const { user, profileData } = useApp();
+  const [isVideo, setIsVideo] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [remoteDisplayName, setRemoteDisplayName] = useState<string>('');
+  const [status, setStatus] = useState<'connecting' | 'connected' | 'ended'>('connecting');
+  const peerRef = useRef<RTCPeerConnection | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const screenTrackRef = useRef<MediaStreamTrack | null>(null);
+
+  const callDocId = `dm_${conversationId}`;
+
+  const cleanup = useCallback(() => {
+    localStreamRef.current?.getTracks().forEach(t => t.stop());
+    peerRef.current?.close();
+    peerRef.current = null;
+    deleteDoc(doc(db, 'calls', callDocId)).catch(() => {});
+  }, [callDocId]);
+
+  useEffect(() => {
+    let active = true;
+
+    const start = async () => {
+      try {
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        // Video off by default
+        stream.getVideoTracks().forEach(t => { t.enabled = false; });
+
+        const pc = new RTCPeerConnection(peerConfig);
+        peerRef.current = pc;
+        stream.getTracks().forEach(t => pc.addTrack(t, stream));
+        pc.ontrack = e => {
+          if (active) setRemoteStream(e.streams[0]);
+          setStatus('connected');
+        };
+        pc.onicecandidate = async e => {
+          if (e.candidate) {
+            await addDoc(collection(db, `calls/${callDocId}/candidates_${user!.uid}`), e.candidate.toJSON());
+          }
+        };
+
+        const callRef = doc(db, 'calls', callDocId);
+        const callSnap = await getDoc(callRef);
+        const existingCall = callSnap.data();
+
+        if (!existingCall?.offer) {
+          // I am the caller — create offer
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          await setDoc(callRef, {
+            offer: { type: offer.type, sdp: offer.sdp },
+            callerId: user!.uid,
+            callerName: profileData?.displayName || user!.displayName || 'Unknown',
+            conversationId,
+            createdAt: serverTimestamp()
+          });
+          // Listen for answer
+          onSnapshot(callRef, async snap => {
+            const d = snap.data();
+            if (d?.answer && !pc.currentRemoteDescription && active) {
+              setRemoteDisplayName(d.calleeName || 'Friend');
+              await pc.setRemoteDescription(new RTCSessionDescription(d.answer));
+            }
+            if (d?.calleeName) setRemoteDisplayName(d.calleeName);
+          });
+        } else {
+          // I am the callee — create answer
+          setRemoteDisplayName(existingCall.callerName || 'Friend');
+          await pc.setRemoteDescription(new RTCSessionDescription(existingCall.offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await setDoc(callRef, {
+            answer: { type: answer.type, sdp: answer.sdp },
+            calleeName: profileData?.displayName || user!.displayName || 'Unknown'
+          }, { merge: true });
+        }
+
+        // ICE candidates from remote
+        const remoteUidQuery = await getDoc(doc(db, 'calls', callDocId));
+        const remoteUid = remoteUidQuery.data()?.callerId === user!.uid
+          ? null
+          : remoteUidQuery.data()?.callerId;
+
+        // Listen for all candidate collections
+        const callData = remoteUidQuery.data();
+        const otherUid = callData?.callerId === user!.uid ? null : callData?.callerId;
+        if (otherUid) {
+          onSnapshot(collection(db, `calls/${callDocId}/candidates_${otherUid}`), snap => {
+            snap.docChanges().forEach(async change => {
+              if (change.type === 'added' && active) {
+                await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+              }
+            });
+          });
+        }
+        // Also listen for candidates from our path that were added before
+        onSnapshot(collection(db, `calls/${callDocId}/candidates_${user!.uid}`), () => {});
+
+      } catch (err) {
+        console.error('DirectCall error:', err);
+      }
+    };
+
+    start();
+    return () => {
+      active = false;
+      cleanup();
+    };
+  }, [conversationId]);
+
+  const toggleMute = () => {
+    const track = localStreamRef.current?.getAudioTracks()[0];
+    if (track) { track.enabled = !track.enabled; setIsMuted(!track.enabled); }
+  };
+
+  const toggleVideo = () => {
+    const track = localStreamRef.current?.getVideoTracks()[0];
+    if (track) { track.enabled = !track.enabled; setIsVideo(track.enabled); }
+  };
+
+  const toggleScreenShare = async () => {
+    if (!peerRef.current || !localStreamRef.current) return;
+    if (isScreenSharing) {
+      screenTrackRef.current?.stop();
+      screenTrackRef.current = null;
+      setIsScreenSharing(false);
+      setIsVideo(false);
+    } else {
+      try {
+        const ds = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const st = ds.getVideoTracks()[0];
+        screenTrackRef.current = st;
+        const sender = peerRef.current.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) await sender.replaceTrack(st);
+        st.onended = () => { setIsScreenSharing(false); screenTrackRef.current = null; };
+        setIsScreenSharing(true);
+        setIsVideo(true);
+      } catch { /* user cancelled */ }
+    }
+  };
+
+  const endCall = () => {
+    cleanup();
+    onLeave();
+  };
+
+  return (
+    <div className="flex-1 flex flex-col bg-surface-container-low h-full relative">
+      <div className="h-14 border-b border-white/5 flex items-center px-6 gap-3 bg-surface-container/50 backdrop-blur-md">
+        <Phone size="18" className="text-green-400" />
+        <h3 className="text-white font-display font-bold tracking-wide">Voice Call</h3>
+        <span className={`ml-2 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+          status === 'connected' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+        }`}>{status}</span>
+      </div>
+
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 p-6 content-start overflow-y-auto">
+        {localStream && (
+          <div className="aspect-video bg-surface-container-highest rounded-2xl overflow-hidden relative ring-2 ring-primary/50">
+            <VideoPlayer stream={localStream} muted displayName="You" className="w-full h-full" />
+            {!isVideo && (
+              <div className="absolute inset-0 bg-surface-container flex items-center justify-center">
+                <img src={profileData?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${profileData?.displayName}`} className="h-24 w-24 rounded-full border-4 border-background" alt="" />
+              </div>
+            )}
+            <div className="absolute top-4 right-4 bg-black/60 p-2 rounded-full">
+              {isMuted ? <MicOff size="14" className="text-red-400" /> : <Mic size="14" className="text-green-400" />}
+            </div>
+          </div>
+        )}
+        {remoteStream ? (
+          <div className="aspect-video bg-surface-container-highest rounded-2xl overflow-hidden relative border border-white/10">
+            <VideoPlayer stream={remoteStream} displayName={remoteDisplayName || 'Friend'} className="w-full h-full" />
+          </div>
+        ) : (
+          <div className="aspect-video bg-surface-container-highest rounded-2xl flex flex-col items-center justify-center border border-white/10 gap-4">
+            <div className="flex gap-1">
+              {[0,1,2].map(i => <span key={i} className="w-2 h-2 rounded-full bg-on-surface-variant animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+            </div>
+            <p className="text-on-surface-variant text-sm font-medium">Waiting for the other person to join…</p>
+          </div>
+        )}
+      </div>
+
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 glass-floating p-4 rounded-full z-50 shadow-2xl">
+        <button onClick={toggleVideo} title={isVideo ? 'Turn Off Camera' : 'Turn On Camera'} className={`p-4 rounded-full transition-all ${isVideo ? 'bg-green-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+          {isVideo ? <Video size="22" /> : <VideoOff size="22" />}
+        </button>
+        <button onClick={toggleScreenShare} title={isScreenSharing ? 'Stop Share' : 'Share Screen'} className={`p-4 rounded-full transition-all ${isScreenSharing ? 'bg-blue-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+          {isScreenSharing ? <MonitorOff size="22" /> : <Monitor size="22" />}
+        </button>
+        <button onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'} className={`p-4 rounded-full transition-all ${isMuted ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+          {isMuted ? <MicOff size="22" /> : <Mic size="22" />}
+        </button>
+        <button onClick={endCall} title="End Call" className="p-4 bg-error text-on-error hover:opacity-80 rounded-full transition-all shadow-lg">
+          <PhoneOff size="22" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ── Incoming Call Notification ─────────────────────────────────────────────
+const IncomingCallNotification = ({ callDocId, callerName, onAccept, onDecline }: { callDocId: string, callerName: string, onAccept: () => void, onDecline: () => void }) => (
+  <AnimatePresence>
+    <motion.div
+      initial={{ y: 80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 80, opacity: 0 }}
+      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] glass-floating rounded-2xl p-5 shadow-2xl flex items-center gap-5 border border-green-500/30 min-w-[320px]"
+    >
+      <div className="h-12 w-12 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center flex-shrink-0">
+        <PhoneIncoming size="22" className="text-green-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Incoming Call</p>
+        <p className="text-white font-bold text-sm truncate">{callerName}</p>
+      </div>
+      <div className="flex gap-3">
+        <button onClick={onAccept} className="h-10 w-10 rounded-full bg-green-500 text-black flex items-center justify-center hover:bg-green-400 transition-all shadow-lg shadow-green-500/30">
+          <Phone size="18" />
+        </button>
+        <button onClick={onDecline} className="h-10 w-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-400 transition-all">
+          <PhoneMissed size="18" />
+        </button>
+      </div>
+    </motion.div>
+  </AnimatePresence>
+);
 
 const UserList = () => {
   const { currentServerId, user, setCurrentServerId, setCurrentChannelId, setCurrentConversationId } = useApp();
@@ -2013,6 +2393,8 @@ const LonteraApp = () => {
   const [isUserDirectoryOpen, setIsUserDirectoryOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<any>(null);
   const [activeView, setActiveView] = useState('explore');
+  const [activeDirectCall, setActiveDirectCall] = useState<string | null>(null); // conversationId
+  const [incomingCall, setIncomingCall] = useState<{ callDocId: string; callerName: string; conversationId: string } | null>(null);
 
   // Auto-switch to chat view when a channel or conversation is selected
   useEffect(() => {
@@ -2020,6 +2402,39 @@ const LonteraApp = () => {
       setActiveView('chat');
     }
   }, [currentChannelId, currentConversationId]);
+
+  // Listen for incoming DM calls
+  useEffect(() => {
+    if (!user) return;
+    // Listen for any call doc where we are the callee (no answer yet)
+    const q = query(
+      collection(db, 'calls'),
+      where('conversationId', '!=', null)
+    );
+    const unsub = onSnapshot(q, snap => {
+      snap.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!d?.conversationId) return;
+        // Only care if we are a participant but NOT the caller and call has no answer yet
+        if (d.callerId === user.uid) return; // we are the caller
+        if (d.answer) return; // already answered
+        if (!d.offer) return; // no offer yet
+        // Check if this conversation belongs to us
+        const docId = change.doc.id;
+        if (!docId.startsWith('dm_')) return;
+        const convId = docId.replace('dm_', '');
+        // Check if we are a participant in this conversation
+        if (convId.includes(user.uid)) {
+          if (change.type === 'added' || change.type === 'modified') {
+            if (!activeDirectCall) {
+              setIncomingCall({ callDocId: docId, callerName: d.callerName || 'Someone', conversationId: convId });
+            }
+          }
+        }
+      });
+    });
+    return unsub;
+  }, [user, activeDirectCall]);
 
   if (loading) {
     return (
@@ -2062,8 +2477,13 @@ const LonteraApp = () => {
             <div className="flex-1 flex items-center justify-center text-on-surface-variant font-display font-bold uppercase tracking-[0.2em] animate-pulse">
               Explore coming soon...
             </div>
+          ) : activeDirectCall ? (
+            <DirectCallArea
+              conversationId={activeDirectCall}
+              onLeave={() => setActiveDirectCall(null)}
+            />
           ) : (
-            <ChatArea />
+            <ChatArea onStartDirectCall={(convId) => setActiveDirectCall(convId)} />
           )}
           <UserList />
         </div>
@@ -2072,6 +2492,21 @@ const LonteraApp = () => {
       <UserDirectoryModal isOpen={isUserDirectoryOpen} onClose={() => setIsUserDirectoryOpen(false)} setActiveView={setActiveView} />
       <ServerSettingsModal isOpen={isServerSettingsOpen} onClose={() => setIsServerSettingsOpen(false)} server={currentServer} />
       <ChannelSettingsModal isOpen={!!editingChannel} onClose={() => setEditingChannel(null)} channel={editingChannel} serverId={currentServerId || ''} />
+      {incomingCall && !activeDirectCall && (
+        <IncomingCallNotification
+          callDocId={incomingCall.callDocId}
+          callerName={incomingCall.callerName}
+          onAccept={() => {
+            setActiveDirectCall(incomingCall.conversationId);
+            setIncomingCall(null);
+            setActiveView('chat');
+          }}
+          onDecline={() => {
+            deleteDoc(doc(db, 'calls', incomingCall.callDocId)).catch(() => {});
+            setIncomingCall(null);
+          }}
+        />
+      )}
     </div>
   );
 };
