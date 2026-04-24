@@ -91,7 +91,7 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
   );
 };
 
-const TopNavBar = () => {
+const TopNavBar = ({ onOpenProfile }: { onOpenProfile: () => void }) => {
 
   const { user, profileData } = useApp();
   return (
@@ -114,7 +114,7 @@ const TopNavBar = () => {
           <button className="text-on-surface-variant hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><HelpCircle size="20" /></button>
           <button className="text-on-surface-variant hover:text-white p-2 rounded-full hover:bg-white/5 transition-all"><Settings size="20" /></button>
         </div>
-        <div className="flex items-center gap-3 pl-4 border-l border-white/10">
+        <div onClick={onOpenProfile} className="flex items-center gap-3 pl-4 border-l border-white/10 cursor-pointer group">
           <span className="hidden sm:block text-xs font-semibold text-white/50 underline-offset-4 cursor-pointer hover:text-white transition-colors">{profileData?.displayName || user?.email}</span>
           <img 
             src={profileData?.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${profileData?.displayName || 'U'}`} 
@@ -316,11 +316,7 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
               <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold truncate max-w-[120px]">{currentServer?.status || 'Online'}</p>
             </div>
           </div>
-          {isAdmin && (
-            <button onClick={() => setShowServerSettings(true)} className="text-on-surface-variant hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all">
-              <Settings size="16" />
-            </button>
-          )}
+
         </div>
         
       </div>
@@ -378,7 +374,11 @@ const SidebarChannels = ({ onOpenSettings }: { onOpenSettings: () => void }) => 
           <button className="p-2 rounded-lg text-on-surface-variant hover:text-red-400 hover:bg-white/5 transition-all"><Mic size="18" /></button>
           <button className="p-2 rounded-lg text-on-surface-variant hover:text-red-400 hover:bg-white/5 transition-all"><Headphones size="18" /></button>
         </div>
-        <button onClick={onOpenSettings} className="p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-all"><Settings size="18" /></button>
+        {isAdmin && (
+          <button onClick={() => setShowServerSettings(true)} className="p-2 rounded-lg text-on-surface-variant hover:text-white hover:bg-white/5 transition-all">
+            <Settings size="18" />
+          </button>
+        )}
       </div>
       <ServerSettingsModal isOpen={showServerSettings} onClose={() => setShowServerSettings(false)} server={currentServer} />
     </div>
@@ -1385,11 +1385,11 @@ const LonteraApp = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background font-sans">
-      <TopNavBar />
+      <TopNavBar onOpenProfile={() => setIsSettingsOpen(true)} />
       <div className="flex-1 flex mt-16 h-[calc(100vh-64px)] overflow-hidden relative">
         <SidebarServers />
         <div className="flex-1 flex ml-18 bg-surface-container-low">
-          <SidebarChannels onOpenSettings={() => setIsSettingsOpen(true)} />
+          <SidebarChannels onOpenSettings={() => {}} />
           <ChatArea />
           <UserList />
         </div>
