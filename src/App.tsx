@@ -67,7 +67,7 @@ const TopNavBar = () => {
 };
 
 const SidebarServers = () => {
-  const { currentServerId, setCurrentServerId, logout, user } = useApp();
+  const { currentServerId, setCurrentServerId, setCurrentChannelId, logout, user } = useApp();
   const [servers, setServers] = useState<any[]>([]);
 
   useEffect(() => {
