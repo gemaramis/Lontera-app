@@ -133,11 +133,7 @@ service cloud.firestore {
     // Call Signaling
     match /calls/{callId} {
       allow read, write: if isSignedIn();
-
-      match /callerCandidates/{candId} {
-        allow read, write: if isSignedIn();
-      }
-      match /receiverCandidates/{candId} {
+      match /{allSegments=**} {
         allow read, write: if isSignedIn();
       }
     }
