@@ -442,29 +442,89 @@ const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSe
       });
       return () => { unsubUsers(); unsubscribe(); };
     }
-    const q = query(collection(db, `servers/${currentServerId}/channels`));
+    const q = query(collection(db, `servers/${currentServerId}/channels`), orderBy('name'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setChannels(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
     return () => { unsubUsers(); unsubscribe(); };
   }, [currentServerId, user]);
 
+const VoiceChannelItem = ({ channel, currentChannelId, isAdmin, onOpenChannelSettings, onJoin }: { channel: any, currentChannelId: string | null, isAdmin: boolean, onOpenChannelSettings: (c: any) => void, onJoin: (id: string) => void }) => {
+  const [participants, setParticipants] = useState<any[]>([]);
+  const { currentServerId } = useApp();
+
+  useEffect(() => {
+    if (!currentServerId) return;
+    const q = collection(db, `servers/${currentServerId}/channels/${channel.id}/participants`);
+    const unsub = onSnapshot(q, (snap) => {
+      setParticipants(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, [channel.id, currentServerId]);
+
+  return (
+    <div className="mb-1">
+      <div 
+        className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentChannelId === channel.id ? 'bg-primary/20 text-primary ring-1 ring-primary/30' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
+        onClick={() => onJoin(channel.id)}
+      >
+        <div className="flex items-center gap-2 flex-1">
+          <Volume2 size="16" className={currentChannelId === channel.id ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'} />
+          <span className="text-sm font-medium">{channel.name}</span>
+        </div>
+        {isAdmin && (
+          <Settings size="14" className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); onOpenChannelSettings(channel); }} />
+        )}
+      </div>
+      
+      {/* Participants */}
+      <div className="ml-8 space-y-0.5 mt-0.5">
+        {participants.map(p => (
+          <div key={p.id} className="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 transition-all group">
+            <img src={p.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${p.displayName}`} className="h-5 w-5 rounded-md border border-white/10" alt="" />
+            <span className="text-xs text-on-surface-variant group-hover:text-white truncate flex-1">{p.displayName}</span>
+            {p.isMuted && <MicOff size="12" className="text-red-400 opacity-60" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSettings, onOpenUserDirectory }: { onOpenSettings: () => void, onOpenServerSettings: () => void, onOpenChannelSettings: (c: any) => void, onOpenUserDirectory: () => void }) => {
+  const { user, currentServer, currentServerId, currentChannelId, setCurrentChannelId, setCurrentConversationId, setCurrentServerId } = useApp();
+  const [channels, setChannels] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!currentServerId && user) {
+      const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(20)), (snap) => {
+        setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+      const unsubConversations = onSnapshot(query(collection(db, 'conversations'), where('participants', 'array-contains', user.uid), orderBy('updatedAt', 'desc')), (snap) => {
+        setConversations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+      return () => { unsubUsers(); unsubConversations(); };
+    }
+    if (currentServerId) {
+      const q = query(collection(db, `servers/${currentServerId}/channels`), orderBy('name'));
+      const unsub = onSnapshot(q, (snap) => {
+        setChannels(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      });
+      return unsub;
+    }
+  }, [currentServerId, user]);
+
   const createChannel = async (type: 'text' | 'voice') => {
     if (!currentServerId) return;
-    const name = prompt(`New ${type} channel name:`);
-    if (name) {
-      try {
-        await addDoc(collection(db, `servers/${currentServerId}/channels`), {
-          name,
-          type,
-          serverId: currentServerId,
-          createdAt: serverTimestamp()
-        });
-      } catch (err: any) {
-        console.error("Create channel error:", err);
-        alert(`Failed to create channel: ${err.message}`);
-      }
-    }
+    const name = window.prompt(`Enter ${type} channel name:`);
+    if (!name) return;
+    await addDoc(collection(db, `servers/${currentServerId}/channels`), {
+      name,
+      type,
+      createdAt: serverTimestamp()
+    });
   };
 
   if (!currentServerId) {
@@ -566,19 +626,14 @@ const SidebarChannels = ({ onOpenSettings, onOpenServerSettings, onOpenChannelSe
           </div>
           <div className="space-y-0.5">
             {channels.filter(c => c.type === 'voice').map(channel => (
-              <div 
-                key={channel.id} 
-                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer group transition-all ${currentChannelId === channel.id ? 'bg-primary/20 text-primary ring-1 ring-primary/30' : 'text-on-surface-variant hover:bg-white/5 hover:text-on-surface'}`}
-                onClick={() => setCurrentChannelId(channel.id)}
-              >
-                <div className="flex items-center gap-2 flex-1">
-                  <Volume2 size="16" className={currentChannelId === channel.id ? 'text-primary' : 'text-on-surface-variant group-hover:text-on-surface'} />
-                  <span className="text-sm font-medium">{channel.name}</span>
-                </div>
-                {isAdmin && (
-                  <Settings size="14" className="opacity-0 group-hover:opacity-60 hover:opacity-100 transition-all" onClick={(e) => { e.stopPropagation(); onOpenChannelSettings(channel); }} />
-                )}
-              </div>
+              <VoiceChannelItem 
+                key={channel.id}
+                channel={channel}
+                currentChannelId={currentChannelId}
+                isAdmin={isAdmin}
+                onOpenChannelSettings={onOpenChannelSettings}
+                onJoin={(id) => setCurrentChannelId(id)}
+              />
             ))}
           </div>
         </div>
@@ -1596,12 +1651,29 @@ const UserList = () => {
   const [members, setMembers] = useState<any[]>([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), limit(50));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
-    return unsubscribe;
-  }, []);
+    if (currentServerId) {
+      // Listen to server members subcollection
+      const unsubMembers = onSnapshot(collection(db, `servers/${currentServerId}/members`), (snap) => {
+        const uids = snap.docs.map(d => d.id);
+        if (uids.length > 0) {
+          // Query users that are in the member list (limit 30 for 'in' query)
+          const q = query(collection(db, 'users'), where('uid', 'in', uids.slice(0, 30)));
+          const unsubUsers = onSnapshot(q, (s) => setMembers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+          return unsubUsers;
+        } else {
+          setMembers([]);
+        }
+      });
+      return unsubMembers;
+    } else {
+      // Discovery mode when not in a server
+      const q = query(collection(db, 'users'), limit(50));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+      return unsubscribe;
+    }
+  }, [currentServerId]);
 
   const startConversation = async (otherUserId: string) => {
     if (!user || user.uid === otherUserId) return;
