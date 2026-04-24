@@ -820,7 +820,7 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
           for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
           const average = sum / dataArray.length;
           const isActuallyEnabled = stream.getAudioTracks()[0]?.enabled;
-          setIsSpeaking(!!isActuallyEnabled && average > 10); 
+          setIsSpeaking(!!isActuallyEnabled && average > 30); 
           animationId = requestAnimationFrame(checkAudio);
         };
         checkAudio();
