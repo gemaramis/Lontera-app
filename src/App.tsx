@@ -557,7 +557,13 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
     let active = true;
     const startStreaming = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        } catch (err) {
+          console.warn("Could not get video, falling back to audio only", err);
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
         if (!active) {
           stream.getTracks().forEach(t => t.stop());
           return;
