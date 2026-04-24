@@ -36,18 +36,21 @@ import { db } from './lib/firebase';
 
 
 const ChannelSettingsModal = ({ isOpen, onClose, channel, serverId }: { isOpen: boolean, onClose: () => void, channel: any, serverId: string }) => {
+  const { user, currentServer } = useApp();
   const [name, setName] = useState('');
   useEffect(() => { if (channel) setName(channel.name); }, [channel, isOpen]);
 
+  const isAdmin = currentServer?.adminIds?.includes(user?.uid) || currentServer?.ownerId === user?.uid;
+
   const handleSave = async () => {
-    if (!channel || !serverId) return;
+    if (!channel || !serverId || !isAdmin) return;
     const channelRef = doc(db, `servers/${serverId}/channels`, channel.id);
     await setDoc(channelRef, { name }, { merge: true });
     onClose();
   };
 
   const handleDelete = async () => {
-    if (!channel || !serverId || !window.confirm('Delete this channel?')) return;
+    if (!channel || !serverId || !isAdmin || !window.confirm('Delete this channel?')) return;
     const channelRef = doc(db, `servers/${serverId}/channels`, channel.id);
     await deleteDoc(channelRef);
     onClose();
@@ -63,12 +66,16 @@ const ChannelSettingsModal = ({ isOpen, onClose, channel, serverId }: { isOpen: 
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2">Channel Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all" />
+                <input value={name} onChange={(e) => setName(e.target.value)} disabled={!isAdmin} className="w-full bg-surface-container-highest border-b border-white/10 p-3 rounded-lg text-white outline-none focus:border-primary transition-all disabled:opacity-50" />
               </div>
             </div>
             <div className="flex gap-3 mt-8">
-              <button onClick={handleSave} className="flex-1 btn-primary py-2.5 rounded-xl text-sm">Save</button>
-              <button onClick={handleDelete} className="p-2.5 bg-error/20 text-error rounded-xl hover:bg-error/30 transition-all"><Trash2 size="18" /></button>
+              {isAdmin && (
+                <>
+                  <button onClick={handleSave} className="flex-1 btn-primary py-2.5 rounded-xl text-sm">Save</button>
+                  <button onClick={handleDelete} className="p-2.5 bg-error/20 text-error rounded-xl hover:bg-error/30 transition-all"><Trash2 size="18" /></button>
+                </>
+              )}
               <button onClick={onClose} className="flex-1 bg-white/5 text-white py-2.5 rounded-xl text-sm">Cancel</button>
             </div>
           </motion.div>
@@ -109,6 +116,8 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
       setStatus(server.status || '');
     }
   }, [server, isOpen]);
+
+  const isAdmin = server?.adminIds?.includes(user?.uid) || server?.ownerId === user?.uid;
 
   const handleSave = async () => {
     if (!server) return;
@@ -245,7 +254,11 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
               </div>
 
               <div className="flex gap-3 mt-8">
-                <button onClick={handleSave} className="flex-1 btn-primary py-3 rounded-xl text-sm">Save Changes</button>
+                {isAdmin ? (
+                  <button onClick={handleSave} className="flex-1 btn-primary py-3 rounded-xl text-sm">Save Changes</button>
+                ) : (
+                  <div className="flex-1" />
+                )}
                 <button onClick={onClose} className="flex-1 bg-white/5 text-white py-3 rounded-xl text-sm hover:bg-white/10 transition-all font-bold">Cancel</button>
               </div>
             </div>
