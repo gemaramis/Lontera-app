@@ -102,7 +102,7 @@ service cloud.firestore {
       // Recursive memberships
       match /members/{memberId} {
         allow read, list: if isServerMember(serverId) || isServerOwner(serverId);
-        allow create: if isSignedIn() && memberId == request.auth.uid; // Allow self-join
+        allow create: if isSignedIn() && (memberId == request.auth.uid || isServerOwner(serverId) || isServerAdmin(serverId));
         allow delete: if isServerOwner(serverId) || (memberId == request.auth.uid);
       }
 
