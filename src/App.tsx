@@ -893,7 +893,7 @@ const UserList = () => {
       
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-6">
         <div>
-          <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4 pl-2">Online â€” {onlineMembers.length}</h4>
+          <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4 pl-2">Online - {onlineMembers.length}</h4>
           <div className="space-y-1">
             {onlineMembers.map(m => (
               <div 
@@ -920,7 +920,7 @@ const UserList = () => {
         </div>
 
         <div>
-           <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4 pl-2">Offline â€” {offlineMembers.length}</h4>
+           <h4 className="text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-[0.2em] mb-4 pl-2">Offline - {offlineMembers.length}</h4>
            <div className="space-y-1 opacity-50 transition-opacity hover:opacity-80">
               {offlineMembers.map(m => (
                 <div 
