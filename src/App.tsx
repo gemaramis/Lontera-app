@@ -1305,23 +1305,37 @@ const FriendsView = () => {
       setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
+    // Listen for outgoing requests
+    const unsubSent = onSnapshot(collection(db, `users/${user.uid}/sentRequests`), (snap) => {
+      setSentRequests(snap.docs.map(d => d.id));
+    });
+
     // Listen for all users (for discovery)
     const unsubUsers = onSnapshot(query(collection(db, 'users'), limit(50)), (snap) => {
       setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.id !== user.uid));
     });
 
-    return () => { unsubFriends(); unsubReq(); unsubUsers(); };
+    return () => { unsubFriends(); unsubReq(); unsubSent(); unsubUsers(); };
   }, [user]);
+
+  const [sentRequests, setSentRequests] = useState<string[]>([]);
 
   const sendRequest = async (toId: string) => {
     if (!user) return;
     try {
+      // Write to recipient's incoming
       await setDoc(doc(db, `users/${toId}/friendRequests`, user.uid), {
         fromId: user.uid,
         status: 'pending',
         timestamp: serverTimestamp(),
         displayName: user.displayName || 'Unknown',
         photoURL: user.photoURL || ''
+      });
+      // Write to my outgoing
+      await setDoc(doc(db, `users/${user.uid}/sentRequests`, toId), {
+        toId,
+        status: 'pending',
+        timestamp: serverTimestamp()
       });
       alert("Friend request sent!");
     } catch (err: any) {
@@ -1336,13 +1350,16 @@ const FriendsView = () => {
     await setDoc(doc(db, `users/${user.uid}/friends`, fromId), { uid: fromId, since: serverTimestamp() });
     // Add me to their friends
     await setDoc(doc(db, `users/${fromId}/friends`, user.uid), { uid: user.uid, since: serverTimestamp() });
-    // Delete request
+    // Delete from my incoming
     await deleteDoc(doc(db, `users/${user.uid}/friendRequests`, fromId));
+    // Delete from their outgoing
+    await deleteDoc(doc(db, `users/${fromId}/sentRequests`, user.uid));
   };
 
   const declineRequest = async (fromId: string) => {
     if (!user) return;
     await deleteDoc(doc(db, `users/${user.uid}/friendRequests`, fromId));
+    await deleteDoc(doc(db, `users/${fromId}/sentRequests`, user.uid));
   };
 
   const startChat = (friendId: string) => {
@@ -1413,12 +1430,19 @@ const FriendsView = () => {
                       <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-0.5">{u.status || 'Offline'}</p>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => sendRequest(u.id)}
-                    className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-primary hover:text-black transition-all"
-                  >
-                    Send Friend Request
-                  </button>
+                  {sentRequests.includes(u.id) ? (
+                    <div className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant bg-white/5 rounded-xl border border-white/5">
+                      <Mail size="14" />
+                      Pending Request
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => sendRequest(u.id)}
+                      className="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-primary hover:text-black transition-all"
+                    >
+                      Send Friend Request
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
