@@ -31,7 +31,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, setDoc, deleteDoc, getDoc, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, setDoc, deleteDoc, getDoc, getDocs, limit } from 'firebase/firestore';
 import { db } from './lib/firebase';
 
 
@@ -86,6 +86,8 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
   const [status, setStatus] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   const [tab, setTab] = useState<'general' | 'members'>('general');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteStatus, setInviteStatus] = useState<{ type: 'error' | 'success', msg: string } | null>(null);
 
   useEffect(() => {
     if (server && isOpen) {
@@ -113,6 +115,38 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
     const serverRef = doc(db, 'servers', server.id);
     await setDoc(serverRef, { name, description, status }, { merge: true });
     onClose();
+  };
+
+  const handleDeleteServer = async () => {
+    if (!server || !window.confirm(`Are you sure you want to delete "${server.name}"? This cannot be undone.`)) return;
+    await deleteDoc(doc(db, 'servers', server.id));
+    onClose();
+  };
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteStatus(null);
+    if (!inviteEmail.includes('@')) {
+      setInviteStatus({ type: 'error', msg: 'Please enter a valid email.' });
+      return;
+    }
+    try {
+      const q = query(collection(db, 'users'), where('email', '==', inviteEmail), limit(1));
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        setInviteStatus({ type: 'error', msg: 'User not found.' });
+        return;
+      }
+      const newUser = snap.docs[0];
+      await setDoc(doc(db, `servers/${server.id}/members`, newUser.id), {
+        uid: newUser.id,
+        joinedAt: serverTimestamp()
+      });
+      setInviteStatus({ type: 'success', msg: `Added ${newUser.data().displayName}!` });
+      setInviteEmail('');
+    } catch (err: any) {
+      setInviteStatus({ type: 'error', msg: err.message });
+    }
   };
 
   return (
@@ -148,33 +182,64 @@ const ServerSettingsModal = ({ isOpen, onClose, server }: { isOpen: boolean, onC
                       <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-2.5">Description</label>
                       <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full bg-surface-container-highest border border-white/10 p-3 rounded-xl text-white outline-none focus:border-primary transition-all resize-none text-sm" />
                     </div>
+                    {server.ownerId === user?.uid && (
+                      <div className="pt-4">
+                        <button 
+                          onClick={handleDeleteServer}
+                          className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors text-xs font-bold uppercase tracking-widest"
+                        >
+                          <Trash2 size="14" />
+                          Delete Server
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {members.map(m => (
-                      <div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:bg-white/10 transition-all">
-                        <div className="flex items-center gap-3">
-                          <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-9 w-9 rounded-xl border border-white/10" />
-                          <div>
-                            <p className="font-bold text-white text-sm leading-tight">{m.displayName}</p>
-                            <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-widest leading-tight">{server.ownerId === m.id ? 'Owner' : (server.adminIds?.includes(m.id) ? 'Admin' : 'Member')}</p>
-                          </div>
-                        </div>
-                        {server.ownerId === user?.uid && m.id !== user?.uid && (
-                          <button 
-                            onClick={async () => {
-                              const newAdmins = server.adminIds?.includes(m.id) 
-                                ? server.adminIds.filter((id: string) => id !== m.id)
-                                : [...(server.adminIds || []), m.id];
-                              await setDoc(doc(db, 'servers', server.id), { adminIds: newAdmins }, { merge: true });
-                            }}
-                            className={`p-2 rounded-lg transition-all ${server.adminIds?.includes(m.id) ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:bg-white/20'}`}
-                          >
-                            <Shield size="16" />
-                          </button>
-                        )}
+                  <div className="space-y-6">
+                    <form onSubmit={handleInvite} className="bg-white/5 p-5 rounded-2xl border border-white/5">
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest mb-3">Invite by Email</label>
+                      <div className="flex gap-2">
+                        <input 
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          placeholder="friend@example.com"
+                          className="flex-1 bg-surface-container-highest border border-white/10 p-2.5 rounded-xl text-white outline-none focus:border-primary transition-all text-sm"
+                        />
+                        <button type="submit" className="bg-primary text-[#310048] px-4 py-2 rounded-xl text-sm font-bold hover:opacity-90 transition-all">Add</button>
                       </div>
-                    ))}
+                      {inviteStatus && (
+                        <p className={`mt-2 text-[10px] font-bold uppercase tracking-wider ${inviteStatus.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{inviteStatus.msg}</p>
+                      )}
+                    </form>
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-display font-bold text-on-surface-variant uppercase tracking-widest px-2">Member List</label>
+                      {members.map(m => (
+                        <div key={m.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:bg-white/10 transition-all">
+                          <div className="flex items-center gap-3">
+                            <img src={m.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${m.displayName}`} className="h-9 w-9 rounded-xl border border-white/10" />
+                            <div>
+                              <p className="font-bold text-white text-sm leading-tight">{m.displayName}</p>
+                              <p className="text-[9px] text-on-surface-variant font-bold uppercase tracking-widest leading-tight">{server.ownerId === m.id ? 'Owner' : (server.adminIds?.includes(m.id) ? 'Admin' : 'Member')}</p>
+                            </div>
+                          </div>
+                          {server.ownerId === user?.uid && m.id !== user?.uid && (
+                            <button 
+                              onClick={async () => {
+                                const newAdmins = server.adminIds?.includes(m.id) 
+                                  ? server.adminIds.filter((id: string) => id !== m.id)
+                                  : [...(server.adminIds || []), m.id];
+                                await setDoc(doc(db, 'servers', server.id), { adminIds: newAdmins }, { merge: true });
+                              }}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${server.adminIds?.includes(m.id) ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:bg-white/20'}`}
+                              title={server.adminIds?.includes(m.id) ? 'Remove Admin' : 'Make Admin'}
+                            >
+                              <span className="text-[9px] font-bold uppercase tracking-widest hidden group-hover:block">{server.adminIds?.includes(m.id) ? 'Revoke Admin' : 'Promote to Admin'}</span>
+                              <Shield size="16" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
