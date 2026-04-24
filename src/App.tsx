@@ -796,44 +796,45 @@ const VideoPlayer = ({ stream, muted = false, className, displayName }: { stream
   useEffect(() => {
     if (!stream) return;
     
-    let audioContext: AudioContext;
-    let analyser: AnalyserNode;
-    let animationId: number;
+    let audioContext: AudioContext | null = null;
+    let analyser: AnalyserNode | null = null;
+    let animationId: number | null = null;
 
-    try {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      // Check if there's an audio track
-      if (stream.getAudioTracks().length === 0) return;
+    const initAudio = async () => {
+      try {
+        if (stream.getAudioTracks().length === 0) return;
+        
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioContext.state === 'suspended') await audioContext.resume();
+        
+        const source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 128;
+        source.connect(analyser);
 
-      const source = audioContext.createMediaStreamSource(stream);
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256; // Smaller for better performance
-      source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const checkAudio = () => {
+          if (!analyser) return;
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          const average = sum / dataArray.length;
+          const isActuallyEnabled = stream.getAudioTracks()[0]?.enabled;
+          setIsSpeaking(!!isActuallyEnabled && average > 10); 
+          animationId = requestAnimationFrame(checkAudio);
+        };
+        checkAudio();
+      } catch (err) {
+        console.warn("Audio analysis init failed", err);
+      }
+    };
 
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const checkAudio = () => {
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          sum += dataArray[i];
-        }
-        const average = sum / bufferLength;
-        // Threshold check + ensure the track is actually enabled
-        const isActuallyEnabled = stream.getAudioTracks()[0]?.enabled;
-        setIsSpeaking(isActuallyEnabled && average > 10); 
-        animationId = requestAnimationFrame(checkAudio);
-      };
-
-      checkAudio();
-    } catch (err) {
-      console.warn("Audio analysis failed", err);
-    }
+    initAudio();
 
     return () => {
       if (animationId) cancelAnimationFrame(animationId);
-      if (audioContext) audioContext.close();
+      if (audioContext) audioContext.close().catch(() => {});
+      analyser = null;
     };
   }, [stream]);
 
@@ -942,24 +943,26 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
             const callId = getCallId(user!.uid, p.uid);
             const callRef = doc(db, 'calls', callId);
 
-            // ICE Candidates
-            pc.onicecandidate = (event) => {
-              if (event.candidate) {
-                const candColl = user!.uid > p.uid ? 'callerCandidates' : 'receiverCandidates';
-                addDoc(collection(callRef, candColl), event.candidate.toJSON());
-              }
-            };
-
             // Signaling Logic
             if (user!.uid > p.uid) {
               // I am the caller
+              const sessionId = Date.now().toString();
+              const sessionRef = doc(collection(callRef, 'sessions'), sessionId);
+
+              // ICE Candidates
+              pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                  addDoc(collection(sessionRef, 'callerCandidates'), event.candidate.toJSON());
+                }
+              };
+
+              // Offer
               const offer = await pc.createOffer();
               await pc.setLocalDescription(offer);
               await setDoc(callRef, {
+                sessionId,
                 callerId: user!.uid,
                 receiverId: p.uid,
-                serverId,
-                channelId,
                 offer: { type: offer.type, sdp: offer.sdp },
                 updatedAt: serverTimestamp()
               });
@@ -967,13 +970,13 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
               // Listen for answer
               onSnapshot(callRef, async (docSnap) => {
                 const data = docSnap.data();
-                if (data?.answer && !pc.currentRemoteDescription) {
+                if (data?.sessionId === sessionId && data?.answer && !pc.currentRemoteDescription) {
                   await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                 }
               });
 
               // Listen for receiver candidates
-              onSnapshot(collection(callRef, 'receiverCandidates'), (candSnap) => {
+              onSnapshot(collection(sessionRef, 'receiverCandidates'), (candSnap) => {
                 candSnap.docChanges().forEach(async (change) => {
                   if (change.type === 'added') {
                     await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
@@ -984,21 +987,34 @@ const VoiceArea = ({ serverId, channelId, channelName }: { serverId: string, cha
               // I am the receiver
               onSnapshot(callRef, async (docSnap) => {
                 const data = docSnap.data();
-                if (data?.offer && !pc.currentRemoteDescription) {
+                if (data?.offer && data?.sessionId && !pc.currentRemoteDescription) {
+                  const sessionId = data.sessionId;
+                  const sessionRef = doc(collection(callRef, 'sessions'), sessionId);
+
+                  // ICE Candidates
+                  pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                      addDoc(collection(sessionRef, 'receiverCandidates'), event.candidate.toJSON());
+                    }
+                  };
+
                   await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
                   const answer = await pc.createAnswer();
                   await pc.setLocalDescription(answer);
-                  await setDoc(callRef, { answer: { type: answer.type, sdp: answer.sdp } }, { merge: true });
-                }
-              });
+                  await setDoc(callRef, { 
+                    answer: { type: answer.type, sdp: answer.sdp },
+                    updatedAt: serverTimestamp()
+                  }, { merge: true });
 
-              // Listen for caller candidates
-              onSnapshot(collection(callRef, 'callerCandidates'), (candSnap) => {
-                candSnap.docChanges().forEach(async (change) => {
-                  if (change.type === 'added') {
-                    await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-                  }
-                });
+                  // Listen for caller candidates
+                  onSnapshot(collection(sessionRef, 'callerCandidates'), (candSnap) => {
+                    candSnap.docChanges().forEach(async (change) => {
+                      if (change.type === 'added') {
+                        await pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+                      }
+                    });
+                  });
+                }
               });
             }
           });
